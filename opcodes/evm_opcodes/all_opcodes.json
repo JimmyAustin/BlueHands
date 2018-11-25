@@ -1,0 +1,1026 @@
+[
+    {
+        "bin": "00",
+        "description": "Halts execution",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "STOP"
+    },
+    {
+        "bin": "01",
+        "description": "Addition operation",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "ADD"
+    },
+    {
+        "bin": "02",
+        "description": "Multiplication operation",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "MUL"
+    },
+    {
+        "bin": "03",
+        "description": "Subtraction operation",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "SUB"
+    },
+    {
+        "bin": "04",
+        "description": "Integer division operation",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "DIV"
+    },
+    {
+        "bin": "05",
+        "description": "Signed integer",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "SDIV"
+    },
+    {
+        "bin": "06",
+        "description": "Modulo",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "MOD"
+    },
+    {
+        "bin": "07",
+        "description": "Signed modulo",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "SMOD"
+    },
+    {
+        "bin": "08",
+        "description": "Modulo",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "ADDMOD"
+    },
+    {
+        "bin": "09",
+        "description": "Modulo",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "MULMOD"
+    },
+    {
+        "bin": "0a",
+        "description": "Exponential operation",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "EXP"
+    },
+    {
+        "bin": "0b",
+        "description": "Extend length of two's complement signed integer",
+        "len_arg": [],
+        "section": "0s: Stop and Arithmetic Operations",
+        "text": "SIGNEXTEND"
+    },
+    {
+        "bin": "10",
+        "description": "Lesser-than comparison",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "LT"
+    },
+    {
+        "bin": "11",
+        "description": "Greater-than comparison",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "GT"
+    },
+    {
+        "bin": "12",
+        "description": "Signed less-than comparison",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "SLT"
+    },
+    {
+        "bin": "13",
+        "description": "Signed greater-than comparison",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "SGT"
+    },
+    {
+        "bin": "14",
+        "description": "Equality comparison",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "EQ"
+    },
+    {
+        "bin": "15",
+        "description": "Simple not operator",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "ISZERO"
+    },
+    {
+        "bin": "16",
+        "description": "Bitwise AND operation",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "AND"
+    },
+    {
+        "bin": "17",
+        "description": "Bitwise OR operation",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "OR"
+    },
+    {
+        "bin": "18",
+        "description": "Bitwise XOR operation",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "XOR"
+    },
+    {
+        "bin": "19",
+        "description": "Bitwise NOT operation",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "NOT"
+    },
+    {
+        "bin": "1a",
+        "description": "Retrieve single byte from word",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "BYTE"
+    },
+    {
+        "bin": "1b",
+        "description": "Logical left shift",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "SHL"
+    },
+    {
+        "bin": "1c",
+        "description": "Logical right shift",
+        "len_arg": [
+            1
+        ],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "SHR"
+    },
+    {
+        "bin": "1d",
+        "description": "Arithmetic right shift",
+        "len_arg": [
+            1
+        ],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "SAR"
+    },
+    {
+        "bin": "1e",
+        "description": "Rotate left",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "ROL"
+    },
+    {
+        "bin": "1f",
+        "description": "Rotate right",
+        "len_arg": [],
+        "section": "10s: Comparison & Bitwise Logic Operations",
+        "text": "ROR"
+    },
+    {
+        "bin": "20",
+        "description": "Compute Keccak-256 hash",
+        "len_arg": [],
+        "section": "20s: SHA3",
+        "text": "KECCAK256"
+    },
+    {
+        "bin": "30",
+        "description": "Get address of currently executing account",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "ADDRESS"
+    },
+    {
+        "bin": "31",
+        "description": "Get balance of the given account",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "BALANCE"
+    },
+    {
+        "bin": "32",
+        "description": "Get execution origination address",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "ORIGIN"
+    },
+    {
+        "bin": "33",
+        "description": "Get caller address. This is the address of the account that is directly responsible for this execution",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CALLER"
+    },
+    {
+        "bin": "34",
+        "description": "Get deposited value by the instruction/transaction responsible for this execution",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CALLVALUE"
+    },
+    {
+        "bin": "35",
+        "description": "Get input data of current environment",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CALLDATALOAD"
+    },
+    {
+        "bin": "36",
+        "description": "Get size of input data in current environment",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CALLDATASIZE"
+    },
+    {
+        "bin": "37",
+        "description": "Copy input data in current environment to memory This pertains to the input data passed with the message call instruction or transaction",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CALLDATACOPY"
+    },
+    {
+        "bin": "38",
+        "description": "Get size of code running in current environment",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CODESIZE"
+    },
+    {
+        "bin": "39",
+        "description": "Copy code running in current environment to memory",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "CODECOPY"
+    },
+    {
+        "bin": "3a",
+        "description": "Get price of gas in current environment",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "GASPRICE"
+    },
+    {
+        "bin": "3b",
+        "description": "Get size of an account's code",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "EXTCODESIZE"
+    },
+    {
+        "bin": "3c",
+        "description": "Copy an account's code to memory",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "EXTCODECOPY"
+    },
+    {
+        "bin": "40",
+        "description": "Get the hash of one of the 256 most recent complete blocks",
+        "len_arg": [
+            1
+        ],
+        "section": "40s: Block Information",
+        "text": "BLOCKHASH"
+    },
+    {
+        "bin": "41",
+        "description": "Get the block's beneficiary address",
+        "len_arg": [],
+        "section": "40s: Block Information",
+        "text": "COINBASE"
+    },
+    {
+        "bin": "42",
+        "description": "Get the block's timestamp",
+        "len_arg": [],
+        "section": "40s: Block Information",
+        "text": "TIMESTAMP"
+    },
+    {
+        "bin": "43",
+        "description": "Get the block's number",
+        "len_arg": [],
+        "section": "40s: Block Information",
+        "text": "NUMBER"
+    },
+    {
+        "bin": "44",
+        "description": "Get the block's difficulty",
+        "len_arg": [],
+        "section": "40s: Block Information",
+        "text": "DIFFICULTY"
+    },
+    {
+        "bin": "45",
+        "description": "Get the block's gas limit",
+        "len_arg": [],
+        "section": "40s: Block Information",
+        "text": "GASLIMIT"
+    },
+    {
+        "bin": "50",
+        "description": "Remove item from stack",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "POP"
+    },
+    {
+        "bin": "51",
+        "description": "Load word from memory",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "MLOAD"
+    },
+    {
+        "bin": "52",
+        "description": "Save word to memory",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "MSTORE"
+    },
+    {
+        "bin": "53",
+        "description": "Save byte to memory",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "MSTORE8"
+    },
+    {
+        "bin": "54",
+        "description": "Load word from storage",
+        "len_arg": [
+            1
+        ],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "SLOAD"
+    },
+    {
+        "bin": "55",
+        "description": "Save word to storage",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "SSTORE"
+    },
+    {
+        "bin": "56",
+        "description": "Alter the program counter",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "JUMP"
+    },
+    {
+        "bin": "57",
+        "description": "Conditionally alter the program counter",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "JUMPI"
+    },
+    {
+        "bin": "58",
+        "description": "Get the value of the program counter prior to the increment",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "PC"
+    },
+    {
+        "bin": "59",
+        "description": "Get the size of active memory in bytes",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "MSIZE"
+    },
+    {
+        "bin": "5a",
+        "description": "Get the amount of available gas, including the corresponding reduction",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "GAS"
+    },
+    {
+        "bin": "5b",
+        "description": "Mark a valid destination for jumps",
+        "len_arg": [],
+        "section": "50s Stack, Memory, Storage and Flow Operations",
+        "text": "JUMPDEST"
+    },
+    {
+        "bin": "60",
+        "description": "Place 1-byte item on stack",
+        "len_arg": [
+            1
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH1"
+    },
+    {
+        "bin": "61",
+        "description": "Place 2-byte item on stack",
+        "len_arg": [
+            2
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH2"
+    },
+    {
+        "bin": "62",
+        "description": "Place 3-byte item on stack",
+        "len_arg": [
+            3
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH3"
+    },
+    {
+        "bin": "63",
+        "description": "Place 4-byte item on stack",
+        "len_arg": [
+            4
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH4"
+    },
+    {
+        "bin": "64",
+        "description": "Place 5-byte item on stack",
+        "len_arg": [
+            5
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH5"
+    },
+    {
+        "bin": "65",
+        "description": "Place 6-byte item on stack",
+        "len_arg": [
+            6
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH6"
+    },
+    {
+        "bin": "66",
+        "description": "Place 7-byte item on stack",
+        "len_arg": [
+            7
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH7"
+    },
+    {
+        "bin": "67",
+        "description": "Place 8-byte item on stack",
+        "len_arg": [
+            8
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH8"
+    },
+    {
+        "bin": "68",
+        "description": "Place 9-byte item on stack",
+        "len_arg": [
+            9
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH9"
+    },
+    {
+        "bin": "69",
+        "description": "Place 10-byte item on stack",
+        "len_arg": [
+            10
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH10"
+    },
+    {
+        "bin": "6a",
+        "description": "Place 11-byte item on stack",
+        "len_arg": [
+            11
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH11"
+    },
+    {
+        "bin": "6b",
+        "description": "Place 12-byte item on stack",
+        "len_arg": [
+            12
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH12"
+    },
+    {
+        "bin": "6c",
+        "description": "Place 13-byte item on stack",
+        "len_arg": [
+            13
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH13"
+    },
+    {
+        "bin": "6d",
+        "description": "Place 14-byte item on stack",
+        "len_arg": [
+            14
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH14"
+    },
+    {
+        "bin": "6e",
+        "description": "Place 15-byte item on stack",
+        "len_arg": [
+            15
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH15"
+    },
+    {
+        "bin": "6f",
+        "description": "Place 16-byte item on stack",
+        "len_arg": [
+            16
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH16"
+    },
+    {
+        "bin": "70",
+        "description": "Place 17-byte item on stack",
+        "len_arg": [
+            17
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH17"
+    },
+    {
+        "bin": "71",
+        "description": "Place 18-byte item on stack",
+        "len_arg": [
+            18
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH18"
+    },
+    {
+        "bin": "72",
+        "description": "Place 19-byte item on stack",
+        "len_arg": [
+            19
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH19"
+    },
+    {
+        "bin": "73",
+        "description": "Place 20-byte item on stack",
+        "len_arg": [
+            20
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH20"
+    },
+    {
+        "bin": "74",
+        "description": "Place 21-byte item on stack",
+        "len_arg": [
+            21
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH21"
+    },
+    {
+        "bin": "75",
+        "description": "Place 22-byte item on stack",
+        "len_arg": [
+            22
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH22"
+    },
+    {
+        "bin": "76",
+        "description": "Place 23-byte item on stack",
+        "len_arg": [
+            23
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH23"
+    },
+    {
+        "bin": "77",
+        "description": "Place 24-byte item on stack",
+        "len_arg": [
+            24
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH24"
+    },
+    {
+        "bin": "78",
+        "description": "Place 25-byte item on stack",
+        "len_arg": [
+            25
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH25"
+    },
+    {
+        "bin": "79",
+        "description": "Place 26-byte item on stack",
+        "len_arg": [
+            26
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH26"
+    },
+    {
+        "bin": "7a",
+        "description": "Place 27-byte item on stack",
+        "len_arg": [
+            27
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH27"
+    },
+    {
+        "bin": "7b",
+        "description": "Place 28-byte item on stack",
+        "len_arg": [
+            28
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH28"
+    },
+    {
+        "bin": "7c",
+        "description": "Place 29-byte item on stack",
+        "len_arg": [
+            29
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH29"
+    },
+    {
+        "bin": "7d",
+        "description": "Place 30-byte item on stack",
+        "len_arg": [
+            30
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH30"
+    },
+    {
+        "bin": "7e",
+        "description": "Place 31-byte item on stack",
+        "len_arg": [
+            31
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH31"
+    },
+    {
+        "bin": "7f",
+        "description": "Place 32-byte item on stack",
+        "len_arg": [
+            32
+        ],
+        "section": "60s & 70s: Push Operations",
+        "text": "PUSH32"
+    },
+    {
+        "bin": "80",
+        "description": "Duplicate 1th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP1"
+    },
+    {
+        "bin": "81",
+        "description": "Duplicate 2th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP2"
+    },
+    {
+        "bin": "82",
+        "description": "Duplicate 3th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP3"
+    },
+    {
+        "bin": "83",
+        "description": "Duplicate 4th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP4"
+    },
+    {
+        "bin": "84",
+        "description": "Duplicate 5th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP5"
+    },
+    {
+        "bin": "85",
+        "description": "Duplicate 6th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP6"
+    },
+    {
+        "bin": "86",
+        "description": "Duplicate 7th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP7"
+    },
+    {
+        "bin": "87",
+        "description": "Duplicate 8th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP8"
+    },
+    {
+        "bin": "88",
+        "description": "Duplicate 9th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP9"
+    },
+    {
+        "bin": "89",
+        "description": "Duplicate 10th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP10"
+    },
+    {
+        "bin": "8a",
+        "description": "Duplicate 11th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP11"
+    },
+    {
+        "bin": "8b",
+        "description": "Duplicate 12th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP12"
+    },
+    {
+        "bin": "8c",
+        "description": "Duplicate 13th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP13"
+    },
+    {
+        "bin": "8d",
+        "description": "Duplicate 14th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP14"
+    },
+    {
+        "bin": "8e",
+        "description": "Duplicate 15th stack item",
+        "len_arg": [],
+        "section": "80s: Duplication Operations",
+        "text": "DUP15"
+    },
+    {
+        "bin": "90",
+        "description": "Exchange 1st and 2nd stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP1"
+    },
+    {
+        "bin": "91",
+        "description": "Exchange 1st and 3rd stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP2"
+    },
+    {
+        "bin": "92",
+        "description": "Exchange 1st and 4th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP3"
+    },
+    {
+        "bin": "93",
+        "description": "Exchange 1st and 5th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP4"
+    },
+    {
+        "bin": "94",
+        "description": "Exchange 1st and 6th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP5"
+    },
+    {
+        "bin": "95",
+        "description": "Exchange 1st and 7th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP6"
+    },
+    {
+        "bin": "96",
+        "description": "Exchange 1st and 8th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP7"
+    },
+    {
+        "bin": "97",
+        "description": "Exchange 1st and 9th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP8"
+    },
+    {
+        "bin": "98",
+        "description": "Exchange 1st and 10th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP9"
+    },
+    {
+        "bin": "99",
+        "description": "Exchange 1st and 11th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP10"
+    },
+    {
+        "bin": "9a",
+        "description": "Exchange 1st and 12th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP11"
+    },
+    {
+        "bin": "9b",
+        "description": "Exchange 1st and 13th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP12"
+    },
+    {
+        "bin": "9c",
+        "description": "Exchange 1st and 14th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP13"
+    },
+    {
+        "bin": "9d",
+        "description": "Exchange 1st and 15th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP14"
+    },
+    {
+        "bin": "9e",
+        "description": "Exchange 1st and 16th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP15"
+    },
+    {
+        "bin": "9f",
+        "description": "Exchange 1st and 17th stack items",
+        "len_arg": [],
+        "section": "90s: Exchange Operations",
+        "text": "SWAP16"
+    },
+    {
+        "bin": "a0",
+        "description": "Append log record with no topics",
+        "len_arg": [],
+        "section": "a0s: Logging Operations",
+        "text": "LOG0"
+    },
+    {
+        "bin": "a1",
+        "description": "Append log record with one topic",
+        "len_arg": [],
+        "section": "a0s: Logging Operations",
+        "text": "LOG1"
+    },
+    {
+        "bin": "a2",
+        "description": "Append log record with two topics",
+        "len_arg": [],
+        "section": "a0s: Logging Operations",
+        "text": "LOG2"
+    },
+    {
+        "bin": "a3",
+        "description": "Append log record with three topics",
+        "len_arg": [],
+        "section": "a0s: Logging Operations",
+        "text": "LOG3"
+    },
+    {
+        "bin": "a4",
+        "description": "Append log record with four topics",
+        "len_arg": [],
+        "section": "a0s: Logging Operations",
+        "text": "LOG4"
+    },
+    {
+        "bin": "f0",
+        "description": "Create a new account with associated code",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "CREATE"
+    },
+    {
+        "bin": "f1",
+        "description": "Message-call into an account",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "CALL"
+    },
+    {
+        "bin": "f2",
+        "description": "Message-call into this account with alternative account's code",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "CALLCODE"
+    },
+    {
+        "bin": "f3",
+        "description": "Halt execution returning output data",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "RETURN"
+    },
+    {
+        "bin": "f4",
+        "description": "Message-call into this account with an alternative account's code, but persisting the current values for `sender` and `value`",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "DELEGATECALL"
+    },
+    {
+        "bin": "fa",
+        "description": "Static message-call into an account.",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "STATICCALL"
+    },
+    {
+        "bin": "fd",
+        "description": "Halt execution reverting state changes but returning data and remaining gas",
+        "len_arg": [],
+        "section": "f0s: System operations",
+        "text": "REVERT"
+    },
+    {
+        "bin": "ff",
+        "description": "Halt execution and register account for later deletion",
+        "len_arg": [],
+        "section": "Halt Execution, Mark for deletion",
+        "text": "SELFDESTRUCT"
+    }
+]
