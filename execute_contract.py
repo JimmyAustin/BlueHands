@@ -76,4 +76,3 @@ for function_call in function_calls:
     if result.func_type == 'return':
         parsed_result = parse_return_value(result.value)
         print(f"Returned: {result.value.hex()} - {parsed_result}")
-    import pdb; pdb.set_trace()

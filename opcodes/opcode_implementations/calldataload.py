@@ -10,6 +10,4 @@ class CalldataloadOpcode(Opcode):
         ncd = calldata.ljust(32, b"\x00")
         ncd2  = calldata.rjust(32, b"\x00")
         calldata = ncd
-        print(f"PUSHING: {calldata}")
-#        import pdb; pdb.set_trace()
         machine.stack.push(calldata)

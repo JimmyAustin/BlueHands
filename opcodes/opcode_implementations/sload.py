@@ -7,4 +7,3 @@ class SloadOpcode(Opcode):
     def execute(self, machine):
         key = machine.stack.pop()
         machine.stack.push(machine.storage.get(key))
-        import pdb; pdb.set_trace()

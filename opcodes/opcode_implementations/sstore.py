@@ -8,4 +8,3 @@ class SstoreOpcode(Opcode):
         key = machine.stack.pop()
         value = machine.stack.pop()
         machine.storage.set(key, value)
-        import pdb; pdb.set_trace()
