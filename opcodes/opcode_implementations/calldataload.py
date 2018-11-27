@@ -6,4 +6,10 @@ class CalldataloadOpcode(Opcode):
 
     def execute(self, machine):
         address = int.from_bytes(machine.stack.pop(), 'big')
-        machine.stack.push(machine.input[address: address+32])
+        calldata = machine.input[address: address+32]
+        ncd = calldata.ljust(32, b"\x00")
+        ncd2  = calldata.rjust(32, b"\x00")
+        calldata = ncd
+        print(f"PUSHING: {calldata}")
+#        import pdb; pdb.set_trace()
+        machine.stack.push(calldata)

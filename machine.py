@@ -4,16 +4,22 @@ from storage import Storage
 import io
 from opcodes.opcode_builder import OpcodeBuilder
 import sha3
+from utils import bytes_to_int
 
 
 class ReturnException(BaseException):
     def __init__(self, value):
         self.value = value
 
+class ExectionEndedException(BaseException):
+    pass
+
+class StopException(BaseException):
+    pass
 
 
 class Machine:
-    def __init__(self, program, input_data=bytes(), logging=True):
+    def __init__(self, program=bytes(), input_data=bytes(), logging=True):
         self.pc = 0
         self.program = program
         self.stack = Stack()
@@ -26,15 +32,33 @@ class Machine:
     def execute_function_named(self, function_name, args):
         k = sha3.keccak_256()
         k.update(function_name.encode('utf8'))
-        function_sig = bytes.fromhex(k.hexdigest()[0:16])
+        function_sig = bytes.fromhex(k.hexdigest()[0:8])
         return self.execute_function(function_sig, args)
 
     def execute_function(self, function_sig, args):
         self.pc = 0
+        print(f"Executing functionsig: {function_sig.hex()}")
         self.input = bytearray(function_sig)
         for arg in args:
-            self.input.append(arg.rjust(32, b"\x00"))
-        self.execute(pdb_step=False)
+            self.input.extend(arg.rjust(32, b"\x00"))
+        try:
+            self.execute(pdb_step=False)
+            return None
+        except ReturnException as return_e:
+            return return_e.value
+
+    def deploy(self, program):
+        self.program = program
+        self.pc = 0
+        try:
+            self.execute()
+        except ReturnException as return_e:
+            self.program = bytes(return_e.value)
+            self.pc = 0
+            print("Application deployed successfully")
+        except ExectionEndedException:
+            print("No value was returned")
+            raise ExectionEndedException
 
     def get_next_opcode(self, step_pc=True):
         if self.pc >= len(self.program):
@@ -61,7 +85,7 @@ class Machine:
     def step(self):
         next_opcode = self.get_next_opcode()
         if next_opcode is None:
-            raise IndexError('Out of code to run')
+            raise ExectionEndedException('Out of code to run')
         return self.execute_opcode(next_opcode)
         
 
@@ -77,12 +101,14 @@ class Machine:
         self.step_count += 1
         if self.logging:
             print(f"EXECUTING: {opcode.pretty_str()}")
-            self.print_state()
         result = opcode.execute(self)
+        if self.logging:
+            self.print_state()
         if result is None:
             return
         elif result['type'] == 'return':
             raise ReturnException(result['value'])
+
         import pdb; pdb.set_trace()
 
 
@@ -105,4 +131,8 @@ class Machine:
         while next_opcode is not None:
             print(next_opcode.pretty_str())
             next_opcode = self.get_next_opcode()
-        
+    
+    def parse_solidity_returned_string(self, result): #TODO MOVE THIS SOMEWHERE ELSE?
+        offset = bytes_to_int(result[0:32])
+        length = bytes_to_int(result[32:64])
+        return result[32+offset:32+offset+length].decode('ascii')

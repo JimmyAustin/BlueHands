@@ -1,5 +1,5 @@
 from machine import Machine, ReturnException
-
+from utils import bytes_to_int
 
 binary_location = './contracts/build/add.bin'
 
@@ -9,20 +9,9 @@ def load_binary(path):
 
 binary = load_binary(binary_location)
 
-executor = Machine(binary, logging=True)
-try:
-    executor.execute()
-except:
-    print("DONE")
-print(executor.step_count)
-import pdb; pdb.set_trace()
-executor.logging=True
-try:
-    executor.execute_function_named('renderAdd()', [])
-except ReturnException as e:
-    import pdb; pdb.set_trace()
-    print(f"ReturnValue - {e}, {e.value.hex()}")
-except Exception as e:
-    print(f"DONE - {e}")
+machine = Machine(binary, logging=True)
+machine.deploy(binary)
+result = machine.execute_function_named('renderAdd()', [])
+result = bytes_to_int(result)
 
-import pdb; pdb.set_trace()
+print(result)

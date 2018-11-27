@@ -5,4 +5,6 @@ class SstoreOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise NotImplementedError
+        key = machine.stack.pop()
+        value = machine.stack.pop()
+        machine.storage.set(key, value)
