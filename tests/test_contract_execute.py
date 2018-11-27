@@ -58,13 +58,8 @@ def test_function_contract_execute():
     # 39     JUMP
 
 
-
     machine = Machine(program, logging=True)
-    try:
-        result = machine.execute_function_named('add(int256,int256)', [int_to_bytes(5), int_to_bytes(9)])
-        assert False # The app should stop
-    except ValueError as e:
-        # This is expected
-        pass
+    result = machine.execute_function_named('add(int256,int256)', [int_to_bytes(5), int_to_bytes(9)])
+    assert result.func_type == 'stop'
     storage_result = machine.storage.get(bytes.fromhex('00'*32))
     assert bytes_to_int(storage_result) == 14

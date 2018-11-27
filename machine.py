@@ -8,8 +8,9 @@ from utils import bytes_to_int
 
 
 class ReturnException(BaseException):
-    def __init__(self, value):
+    def __init__(self, value, func_type):
         self.value = value
+        self.func_type = func_type
 
 class ExectionEndedException(BaseException):
     pass
@@ -45,7 +46,7 @@ class Machine:
             self.execute(pdb_step=False)
             return None
         except ReturnException as return_e:
-            return return_e.value
+            return return_e
 
     def deploy(self, program):
         self.program = program
@@ -107,7 +108,7 @@ class Machine:
         if result is None:
             return
         elif result['type'] == 'return':
-            raise ReturnException(result['value'])
+            raise ReturnException(result.get('value'), result['func'])
 
         import pdb; pdb.set_trace()
 
@@ -118,7 +119,8 @@ class Machine:
             print(f"{i}: 0x{value.hex()}")
 
         print("---STORAGE---")
-        print(self.storage.storage)
+        for k,v in self.storage.storage.items():
+            print(f"    {k.hex()}: {v.hex()}")
 
         print("---MEMORY---")
         for i in range(0, len(self.memory.data), 16):
@@ -131,8 +133,3 @@ class Machine:
         while next_opcode is not None:
             print(next_opcode.pretty_str())
             next_opcode = self.get_next_opcode()
-    
-    def parse_solidity_returned_string(self, result): #TODO MOVE THIS SOMEWHERE ELSE?
-        offset = bytes_to_int(result[0:32])
-        length = bytes_to_int(result[32:64])
-        return result[32+offset:32+offset+length].decode('ascii')

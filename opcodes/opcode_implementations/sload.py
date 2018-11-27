@@ -5,4 +5,6 @@ class SloadOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise NotImplementedError
+        key = machine.stack.pop()
+        machine.stack.push(machine.storage.get(key))
+        import pdb; pdb.set_trace()

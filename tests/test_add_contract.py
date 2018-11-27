@@ -17,5 +17,5 @@ def test_add_contract():
     machine.deploy(binary)
     result = machine.execute_function_named('renderAdd()', [])
 
-    result = bytes_to_int(result)
+    result = bytes_to_int(result.value)
     assert result == 14690

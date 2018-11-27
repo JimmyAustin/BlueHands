@@ -5,5 +5,7 @@ class StopOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise ValueError()
-#        raise NotImplementedError
+        return {
+            'type': 'return',
+            'func': 'stop'
+        }

@@ -9,5 +9,6 @@ class RevertOpcode(Opcode):
         length = int.from_bytes(machine.stack.pop(), 'big')
         return {
             'type': 'return',
+            'func': 'revert',
             'value': machine.memory.get(address, length)
         }

@@ -372,9 +372,7 @@
     {
         "bin": "54",
         "description": "Load word from storage",
-        "len_arg": [
-            1
-        ],
+        "len_arg": [],
         "section": "50s Stack, Memory, Storage and Flow Operations",
         "text": "SLOAD"
     },
