@@ -4,3 +4,21 @@ EVM Descriptions: https://solidity.readthedocs.io/en/v0.4.24/assembly.html
 YellowPaper: https://ethereum.github.io/yellowpaper/paper.pdf
 
 Examples
+
+https://github.com/CoinCulture/evm-tools/blob/master/analysis/guide.md
+
+
+
+
+
+
+
+Variable inputs: 
+
+function_call
+arguments
+
+
+Install Z3:
+
+python scripts/mk_make.py --prefix=/home/jamesaustin/ --python3 --pypkgdir=/home/jamesaustin/.local/lib/python3.6/site-packages

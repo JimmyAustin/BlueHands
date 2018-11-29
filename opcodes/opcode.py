@@ -1,7 +1,6 @@
 from .evm_opcodes.opcodes import relevant_opcode_details
 
 
-
 class Opcode:
     def __init__(self, instruction):
         self.instruction = instruction
@@ -31,4 +30,7 @@ class Opcode:
         return f"{self.text} {args}"
 
     def execute(self, machine):
+        raise NotImplementedError
+
+    def symbolic_execute(self, machine):
         raise NotImplementedError

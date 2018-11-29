@@ -6,5 +6,4 @@ class CallvalueOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        wei = 0
-        machine.stack.push(int_to_bytes(wei))
+        machine.stack.push(int_to_bytes(machine.call_value))
