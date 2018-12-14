@@ -31,7 +31,7 @@ from .address import AddressOpcode
 from .balance import BalanceOpcode
 from .origin import OriginOpcode
 from .caller import CallerOpcode
-from .callvalue import CallvalueOpcode
+from .callvalue import CallValueOpcode
 from .calldataload import CalldataloadOpcode
 from .calldatasize import CalldatasizeOpcode
 from .calldatacopy import CalldatacopyOpcode

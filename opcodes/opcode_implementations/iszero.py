@@ -1,11 +1,18 @@
 from ..opcode import Opcode
-from utils import bytes_to_int, int_to_bytes
+from utils import bytes_to_int, int_to_bytes, value_is_constant
+from z3 import If
+
 
 class IszeroOpcode(Opcode):
     def __init__(self, instruction):
         super().__init__(instruction)
 
     def execute(self, machine):
-        value = bytes_to_int(machine.stack.pop())
-        value_to_push = 1 if value == 0 else 0
-        machine.stack.push(int_to_bytes(value_to_push))
+        value = machine.stack.pop()
+        if value_is_constant(value):
+            value = bytes_to_int(value)
+            value_to_push = int_to_bytes(1 if value == 0 else 0)
+        else:
+            value_to_push = If(value == 0, 1, 0)
+
+        machine.stack.push(value_to_push)

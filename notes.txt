@@ -21,4 +21,4 @@ arguments
 
 Install Z3:
 
-python scripts/mk_make.py --prefix=/home/jamesaustin/ --python3 --pypkgdir=/home/jamesaustin/.local/lib/python3.6/site-packages
+python scripts/mk_make.py --prefix=/home/jamesaustin --python --pypkgdir=/home/jamesaustin/.local/lib/python3.6/site-packages

@@ -7,4 +7,14 @@ class CalldatasizeOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        machine.stack.push(int_to_bytes(len(machine.input)))
+        if machine.concrete_execution:
+            length = len(machine.input)
+        else:
+            if len(machine.inputs) == 0:
+                length = 0
+            elif len(machine.inputs) == 1:
+                length = 4
+            else:
+                length = (len(machine.inputs) - 1) * 16
+                length = 1000
+        machine.stack.push(int_to_bytes(length))

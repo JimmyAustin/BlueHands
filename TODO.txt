@@ -1,1 +1,4 @@
 # Stop returns Value Error. give it its own error code.
+
+# Implement clone for machine and speculative machine.
+# Get JumpI working

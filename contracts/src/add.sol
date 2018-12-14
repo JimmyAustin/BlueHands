@@ -1,4 +1,4 @@
-pragma solidity ^0.4.22;
+pragma solidity ^0.5.1;
 
 contract add {
  function renderAdd () public pure returns (int) {

@@ -1,4 +1,5 @@
-from machine import Machine, ReturnException
+from machine import Machine
+from exceptions import ReturnException
 from opcode_generator import next_opcode_generator
 import io
 

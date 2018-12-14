@@ -5,22 +5,13 @@ import io
 from opcodes.opcode_builder import OpcodeBuilder
 import sha3
 from utils import bytes_to_int
-
-
-class ReturnException(BaseException):
-    def __init__(self, value, func_type):
-        self.value = value
-        self.func_type = func_type
-
-class ExectionEndedException(BaseException):
-    pass
-
-class StopException(BaseException):
-    pass
+from copy import deepcopy
+from exceptions import ReturnException, ExecutionEndedException
 
 
 class Machine:
-    def __init__(self, program=bytes(), input_data=bytes(), logging=True):
+    def __init__(self, program=bytes(), input_data=bytes(), logging=True, call_value=0):
+        self.concrete_execution = True
         self.pc = 0
         self.program = program
         self.stack = Stack()
@@ -29,6 +20,8 @@ class Machine:
         self.input = input_data
         self.logging = logging
         self.step_count = 0
+        self.call_value = call_value
+        self.path_conditions = []
 
     def execute_function_named(self, function_name, args):
         k = sha3.keccak_256()
@@ -57,9 +50,9 @@ class Machine:
             self.program = bytes(return_e.value)
             self.pc = 0
             print("Application deployed successfully")
-        except ExectionEndedException:
+        except ExecutionEndedException:
             print("No value was returned")
-            raise ExectionEndedException
+            raise ExecutionEndedException
 
     def get_next_opcode(self, step_pc=True):
         if self.pc >= len(self.program):
@@ -86,8 +79,8 @@ class Machine:
     def step(self):
         next_opcode = self.get_next_opcode()
         if next_opcode is None:
-            raise ExectionEndedException('Out of code to run')
-        return self.execute_opcode(next_opcode)
+            raise ExecutionEndedException('Out of code to run')
+        self.execute_opcode(next_opcode)
         
 
     def execute(self, pdb_step=False):
@@ -116,11 +109,11 @@ class Machine:
     def print_state(self):
         print("---STACK---")
         for i, value in enumerate(reversed(self.stack.stack)):
-            print(f"{i}: 0x{value.hex()}")
+            print(f"{i}: 0x{hex_or_string(value)}")
 
         print("---STORAGE---")
         for k,v in self.storage.storage.items():
-            print(f"    {k.hex()}: {v.hex()}")
+            print(f"    {hex_or_string(k)}: {hex_or_string(v)}")
 
         print("---MEMORY---")
         for i in range(0, len(self.memory.data), 16):
@@ -133,3 +126,12 @@ class Machine:
         while next_opcode is not None:
             print(next_opcode.pretty_str())
             next_opcode = self.get_next_opcode()
+
+    def clone(self):
+        return deepcopy(self)
+
+def hex_or_string(value):
+    try:
+        return value.hex()
+    except Exception as e:
+        return str(value)

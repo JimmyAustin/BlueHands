@@ -15,3 +15,9 @@ def parse_solidity_returned_string(result):
     offset = bytes_to_int(result[0:32])
     length = bytes_to_int(result[32:64])
     return result[32+offset:32+offset+length].decode('ascii')
+
+def value_is_constant(value):
+    # Determines if the value passed is a constant or symbolic value
+    if isinstance(value, int) or isinstance(value, bytes):
+        return True
+    return False

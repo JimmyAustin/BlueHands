@@ -1,7 +1,7 @@
-pragma solidity ^0.4.22;
+pragma solidity ^0.5.1;
 
 contract helloWorld {
- function renderHelloWorld () public pure returns (string) {
+ function renderHelloWorld () public pure returns (string memory) {
    return 'helloWorld';
  }
 }
