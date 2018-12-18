@@ -10,7 +10,7 @@ from exceptions import ReturnException, ExecutionEndedException
 
 
 class Machine:
-    def __init__(self, program=bytes(), input_data=bytes(), logging=True, call_value=0):
+    def __init__(self, program=bytes(), input_data=bytes(), logging=False, call_value=0):
         self.concrete_execution = True
         self.pc = 0
         self.program = program
@@ -117,7 +117,7 @@ class Machine:
 
         print("---MEMORY---")
         for i in range(0, len(self.memory.data), 16):
-            print(f"{str(i).zfill(4)} - {self.memory.data[i:i+16].hex()}")
+            print(f"{str(i).zfill(4)} - {self.memory.debug_get(i, 32)}")
 #        print(self.memory.data)
 
 
@@ -129,6 +129,9 @@ class Machine:
 
     def clone(self):
         return deepcopy(self)
+
+    def get_input_at_address(self, address):
+        return self.input[address: address+32]
 
 def hex_or_string(value):
     try:

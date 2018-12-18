@@ -5,8 +5,8 @@ class RevertOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        address = int.from_bytes(machine.stack.pop(), 'big')
-        length = int.from_bytes(machine.stack.pop(), 'big')
+        address = machine.stack.pop()
+        length = machine.stack.pop()
         return {
             'type': 'return',
             'func': 'revert',

@@ -1,6 +1,7 @@
 from machine import Machine
 from opcode_generator import next_opcode_generator
 import io
+from utils import int_to_bytes
 
 
 def test_mstore():
@@ -25,4 +26,4 @@ def test_mstore():
     machine.step()
     assert len(machine.stack.stack) == 0
     assert len(machine.memory.data) == 32
-    assert machine.memory.get(0x0, 32) == b"\x09".rjust(32, b"\x00")
+    assert machine.memory.get(int_to_bytes(0), int_to_bytes(32)) == b"\x09".rjust(32, b"\x00")

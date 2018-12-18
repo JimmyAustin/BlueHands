@@ -18,6 +18,15 @@ def parse_solidity_returned_string(result):
 
 def value_is_constant(value):
     # Determines if the value passed is a constant or symbolic value
-    if isinstance(value, int) or isinstance(value, bytes):
+    if isinstance(value, int) or isinstance(value, bytes) or isinstance(value, bytearray):
         return True
     return False
+
+def parse_solidity_abi_input(input_value):
+    if len(input_value) == 0:
+        return None
+    return {
+        'func': input_value[0:4],
+        'args': [input_value[x:x+32] for x in range(4, len(input_value), 32)]
+    }
+

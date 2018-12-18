@@ -11,9 +11,6 @@ class OpcodeBuilder:
             return InvalidOpcode(instruction)
         text = opcode_bin_to_text_mapping[instruction]
         class_to_init, additional_args = directory[text]
-        print(class_to_init)
-        print(instruction)
-        print(additional_args)
         return class_to_init(instruction, *additional_args)
 
     def instruction_is_implemented(text):
