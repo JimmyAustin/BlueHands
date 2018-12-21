@@ -7,5 +7,9 @@ class SwapOpcode(Opcode):
 
     def execute(self, machine):
         top_value = machine.stack.stack[-1]
-        machine.stack.stack[-1] = machine.stack.stack[-(self.length + 1)]
+        try:
+            machine.stack.stack[-1] = machine.stack.stack[-(self.length + 1)]
+        except IndexError as e:
+            import pdb; pdb.set_trace()
+            raise e
         machine.stack.stack[-(self.length + 1)] = top_value

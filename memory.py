@@ -4,8 +4,9 @@ MEMORY_CONCRETE = 0
 MEMORY_APPROX = 1
 
 class Memory:
-    def __init__(self):
+    def __init__(self, logging=True):
         self.data = []
+        self.logging = logging
 
     def expand(self, expand_to):
         expand_by = expand_to - len(self.data) 
@@ -13,6 +14,8 @@ class Memory:
             self.data.extend([(MEMORY_CONCRETE,0,None)] * expand_by)
 
     def set(self, address, value):
+        if self.logging:
+            print(f"MEMORY: SET {address} TO {value}")
         address = int.from_bytes(address, 'big')
         if value_is_constant(value):
             self.expand(address+len(value))
@@ -52,4 +55,4 @@ class Memory:
             if mem_type == MEMORY_CONCRETE:
                 result += 'M' + (255).to_bytes(1,'big').hex()
             else:
-                result += 'S' + symbolic_offset
+                result += 'S' + str(symbolic_offset)

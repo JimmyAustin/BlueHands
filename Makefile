@@ -8,6 +8,7 @@ define compile_file
 	solc --bin -o ./contracts/build/ $(1) --overwrite
 	solc --bin-runtime -o ./contracts/build/ $(1) --overwrite
 	solc --opcodes -o ./contracts/build/ $(1) --overwrite
+	solc --hashes -o ./contracts/build/ $(1) --overwrite
 endef
 
 build:

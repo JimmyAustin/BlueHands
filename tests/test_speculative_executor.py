@@ -1,7 +1,8 @@
 from speculative_machine_executor import SpeculativeMachineExecutor
 from speculative_machine import SpeculativeMachine 
 from z3 import BitVecVal
-from utils import bytes_to_int, int_to_bytes, parse_solidity_abi_input
+from utils import bytes_to_int, uint_to_bytes, int_to_bytes, parse_solidity_abi_input
+from machine import Machine
 
 # contract branchTest {
 #   function renderAdd (int value) public pure returns (int) {
@@ -42,7 +43,7 @@ def test_identify_return_paths():
     for possible_end in possible_ends:
         if possible_end['type'] == 'return':
             return_count += 1
-            input_value = possible_end['input']
+            input_value = possible_end['inputs'][0]
             if input_value.hex() == 'a6c14f8d0000000000000000000000000000000000000000000000000000000000000005':
                 found_1_solution = True
             if input_value.hex() == 'a6c14f8d0000000000000000000000000000000000000000000000000000000000000000':
@@ -52,6 +53,20 @@ def test_identify_return_paths():
     assert found_0_solution == True
 
     assert return_count == 2
+from z3 import *
+
+def test_input():
+    from speculative_machine_executor import calculate_inputs_for_machine
+    machine = SpeculativeMachine()
+    machine.fix_input(uint_to_bytes(2**256-1), 8)
+    input_value = calculate_inputs_for_machine(machine, [])[0].hex()
+    solver = Solver()
+    solver.add(*machine.path_conditions)
+    print(solver)
+    solver.check()
+    model = solver.model()
+    components = {x.name(): uint_to_bytes(model[x].as_long()) for x in model}
+    assert input_value == '0' * 16 + 'f' * 64 + '0' * 48 
 
 def test_have_acceptance_criteria():
     program = bytes.fromhex(branchTest)
@@ -59,13 +74,13 @@ def test_have_acceptance_criteria():
     machine.program = program
 
     acceptance_criteria = [
-        machine.return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.return_value == BitVecVal(1, 256)
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(1, 256)
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
     assert len(possible_ends) == 1
-    assert possible_ends[0]['input'].hex() == branchTestInputRet1
+    assert possible_ends[0]['inputs'][0].hex() == branchTestInputRet1
 
 symbolicReturn = "6080604052600436106039576000357c0100000000000000000000000000000000000000000000" + \
                  "00000000000090048063db89f05114603e575b600080fd5b348015604957600080fd5b50607d60" + \
@@ -89,7 +104,7 @@ def test_symbolic_return__only():
 
     acceptance_criteria = [
         machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(5, 256)
+        BitVecVal(5, 256) == machine.last_return_value 
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
@@ -97,7 +112,7 @@ def test_symbolic_return__only():
     assert len(possible_ends) == 1
 
     solidity_input = parse_solidity_abi_input(possible_ends[0]['inputs'][0])
-    import pdb; pdb.set_trace()
+
     assert bytes_to_int(solidity_input['args'][0]) + bytes_to_int(solidity_input['args'][1]) == 5
 
 # Fix the first arg to 3, should set the second arg to 2
@@ -134,6 +149,8 @@ def test_symbolic_return_fix_arg():
 #     }
 # }
 
+# add(int,int) wont run the return opcode, but it will run "stop"
+
 addGet = "6080604052600436106043576000357c0100000000000000000000000000000000000000" + \
          "000000000000000000900480636d4ce63c146048578063a5f3c23b146070575b600080fd" + \
          "5b348015605357600080fd5b50605a60b1565b6040518082815260200191505060405180" + \
@@ -141,6 +158,13 @@ addGet = "6080604052600436106043576000357c01000000000000000000000000000000000000
          "5b81019080803590602001909291908035906020019092919050505060ba565b005b6000" + \
          "8054905090565b808201600081905550505056fea165627a7a723058204d05dba1d9a9d1" + \
          "2b46514ba154b31c5567e118051f19f3a5cc3d56b30d8967550029"
+
+def test_intended_multifunction_usage():
+    program = bytes.fromhex(addGet)
+    machine = Machine(program, logging=True)
+    machine.execute_function_named('add(int256,int256)', [int_to_bytes(5), int_to_bytes(3)])
+    result = machine.execute_function_named('get()', [])    
+    assert bytes_to_int(result.value) == 8
 
 def test_multifunction_calls():
     program = bytes.fromhex(addGet)
@@ -151,10 +175,11 @@ def test_multifunction_calls():
         machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
         machine.last_return_value == BitVecVal(5, 256),
     ]
-
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
 
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['input'])
+    solidity_input = [parse_solidity_abi_input(x) for x in possible_ends[0]['inputs']]
 
-    assert bytes_to_int(solidity_input['args'][0]) == 3
-    assert bytes_to_int(solidity_input['args'][1]) == 2
+    args = solidity_input[0]['args']
+    assert solidity_input[0]['func'].hex() == 'a5f3c23b'
+    assert bytes_to_int(args[0]) + bytes_to_int(args[1]) == 5
+    assert solidity_input[1]['func'].hex() == '6d4ce63c'

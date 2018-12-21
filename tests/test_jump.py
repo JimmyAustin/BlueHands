@@ -52,7 +52,7 @@ def test_optimized_jumpi():
     print(f"Step Count: {machine.step_count}")
 
 
-def test_constant_jump__only():
+def test_constant_jump():
 
     program = bytes.fromhex('60015b600157')
     # 0      PUSH1  => 00
@@ -72,7 +72,7 @@ def test_constant_jump__only():
     assert machine.pc == 1
     assert machine.step_count == 4
 
-def test_symbolic_jump__only():
+def test_symbolic_jump():
     x = Int('X')
 
     machine = SpeculativeMachine()

@@ -31,7 +31,6 @@ class Machine:
 
     def execute_function(self, function_sig, args):
         self.pc = 0
-        print(f"Executing functionsig: {function_sig.hex()}")
         self.input = bytearray(function_sig)
         for arg in args:
             self.input.extend(arg.rjust(32, b"\x00"))
@@ -102,6 +101,8 @@ class Machine:
             return
         elif result['type'] == 'return':
             raise ReturnException(result.get('value'), result['func'])
+        elif result['type'] == 'stop':
+            raise ReturnException(None, result['func'])
 
         import pdb; pdb.set_trace()
 

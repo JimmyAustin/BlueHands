@@ -1,8 +1,14 @@
+def uint_to_bytes(val):
+    return int.to_bytes(val, 32, 'big', signed=False)
+
 def int_to_bytes(val):
-    return int.to_bytes(val, 32, 'big')
+    return int.to_bytes(val, 32, 'big', signed=True)
 
 def bytes_to_int(val):
-    return int.from_bytes(val, 'big')
+    return int.from_bytes(val, 'big', signed=True)
+
+def bytes_to_uint(val):
+    return int.from_bytes(val, 'big', signed=False)
 
 def parse_return_value(result):
     if len(result) == 0:
