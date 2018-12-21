@@ -82,21 +82,22 @@ symbolicReturn = "6080604052600436106039576000357c010000000000000000000000000000
 #  }
 # }
 
-def test_symbolic_return():
+def test_symbolic_return__only():
     program = bytes.fromhex(symbolicReturn)
     machine = SpeculativeMachine()
     machine.program = program
 
     acceptance_criteria = [
-        machine.return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.return_value == BitVecVal(5, 256)
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(5, 256)
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
 
     assert len(possible_ends) == 1
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['input'])
 
+    solidity_input = parse_solidity_abi_input(possible_ends[0]['inputs'][0])
+    import pdb; pdb.set_trace()
     assert bytes_to_int(solidity_input['args'][0]) + bytes_to_int(solidity_input['args'][1]) == 5
 
 # Fix the first arg to 3, should set the second arg to 2
@@ -147,8 +148,8 @@ def test_multifunction_calls():
     machine.program = program
 
     acceptance_criteria = [
-        machine.return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.return_value == BitVecVal(5, 256),
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(5, 256),
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)

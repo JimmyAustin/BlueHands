@@ -11,4 +11,4 @@ class CalldatasizeOpcode(Opcode):
             length = len(machine.input)
             machine.stack.push(int_to_bytes(length))
         else:
-            machine.stack.push(machine.call_data_size)
+            machine.stack.push(machine.call_data_sizes[-1])

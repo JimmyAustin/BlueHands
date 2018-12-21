@@ -130,6 +130,12 @@ class Machine:
     def clone(self):
         return deepcopy(self)
 
+    def clone_and_restart_execution(self):
+        clone = self.clone()
+        clone.pc = 0
+        clone.path_conditions = []
+        return clone
+
     def get_input_at_address(self, address):
         return self.input[address: address+32]
 

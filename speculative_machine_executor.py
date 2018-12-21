@@ -26,26 +26,42 @@ class SpeculativeMachineExecutor():
                 solvers = []
                 for i, machine in enumerate(machines):
                     if sated_solver_for_machine(machine, requirements=additional_requirements):
+                        print("Adding new invocation")
                         possible_machines.append(machine)
             except ReturnException as e:
                 return_value = e.value
+                    
                 if value_is_constant(return_value) is True:
                     return_value = BitVecVal(int.from_bytes(return_value, 'big'), 256)
+                else:
+                    import pdb; pdb.set_trace()
+                print(return_value)
+                return_type_enum = enum_for_return_type(e.func_type)
+                print("Doing machine again")
+
                 requirements = [*additional_requirements,
-                                    *acceptance_criteria,
-                                    machine.return_type==enum_for_return_type(e.func_type),
-                                    machine.return_value==return_value]
+                                *acceptance_criteria,
+                                machine.last_return_type==return_type_enum,
+                                machine.last_return_value==return_value]
                 result = {
                         'machine': machine,
                         'type': e.func_type,
                         'value': e.value,
-                        'path_conditions': machine.path_conditions
+                        'path_conditions': machine.path_conditions,
+                        'invocations': machine.current_invocation
                     }
                 print(result)
                 input_values = calculate_inputs_for_machine(machine, requirements=requirements)
-                if input_value:
+                if input_values:
                     result['inputs'] = input_values                   
                     yield result
+                else:
+                    if e.func_type != "revert":
+                        if machine.max_invocations > machine.current_invocation:
+                            print('Adding machine back in fresh')
+                            machine.new_invocation()
+                            possible_machines.append(machine)
+
             except Exception as e:
                 import pdb; pdb.set_trace()
                 raise e
@@ -67,12 +83,12 @@ def calculate_inputs_for_machine(machine, requirements=[]):
         'input_symbols': [],
         'call_data_size': None
     }]    
-
+    import pdb; pdb.set_trace()
     for model_input in model:
         name = model_input.name()
         if name.startswith('input_'):
             invocation = get_symbol_invocation_from_name(name)
-            grouped_inputs[invocation].append(model_input)
+            grouped_inputs[invocation]['input_symbols'].append(model_input)
         elif name.startswith('CallDataSize'):
             invocation = get_symbol_invocation_from_name(name)
             grouped_inputs[invocation]['call_data_size'] = model_input
@@ -89,7 +105,7 @@ def calculate_inputs_for_machine(machine, requirements=[]):
             call_data_length = int(model[call_data_size].as_long())
             total_value = total_value[:call_data_length]
         grouped_input['result'] = total_value
-    return [x['result'] for x in grouped_input]
+    return [x['result'] for x in grouped_inputs]
 
 
 def enum_for_return_type(return_type):
