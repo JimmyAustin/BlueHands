@@ -4,6 +4,7 @@ from speculative_machine import SpeculativeMachine
 from utils import value_is_constant
 from pprint import pprint
 
+
 class SpeculativeMachineExecutor():
     def __init__(self, starting_machine):
         starting_machine.concrete_execution = False
@@ -11,6 +12,7 @@ class SpeculativeMachineExecutor():
 
         self.starting_machine = starting_machine
         self.branches_evaluated = 0
+
     def possible_ends(self, *args, **kwargs):
         return list(self.generate_possible_ends(*args, **kwargs))
 
@@ -24,7 +26,6 @@ class SpeculativeMachineExecutor():
                 machine.execute()
             except PathDivergenceException as e:
                 machines = e.possible_machines
-                solvers = []
                 for i, machine in enumerate(machines):
                     if sated_solver_for_machine(machine, requirements=additional_requirements):
                         print("Adding new invocation")
@@ -35,43 +36,39 @@ class SpeculativeMachineExecutor():
                 else:
                     machine.print_state()
                 return_value = e.value
-                    
+
                 if return_value is not None and value_is_constant(return_value) is True:
-                    return_value = BitVecVal(int.from_bytes(return_value, 'big'), 256)
-                
-                inputs = calculate_inputs_for_machine(machine)
-                if inputs is not None:
-                    print([x.hex() for x in inputs])
-                    #import pdb; pdb.set_trace()
-                print(return_value)
+                    return_value = BitVecVal(
+                        int.from_bytes(return_value, 'big'), 256)
+
                 return_type_enum = enum_for_return_type(e.func_type)
                 requirements = [*additional_requirements,
                                 *acceptance_criteria,
-                                machine.last_return_type==return_type_enum,
-                                machine.last_return_value==return_value]
+                                machine.last_return_type == return_type_enum,
+                                machine.last_return_value == return_value]
                 result = {
-                        'machine': machine,
-                        'type': e.func_type,
-                        'value': e.value,
-                        'path_conditions': machine.path_conditions,
-                        'invocations': machine.current_invocation
-                    }
+                    'machine': machine,
+                    'type': e.func_type,
+                    'value': e.value,
+                    'path_conditions': machine.path_conditions,
+                    'invocations': machine.current_invocation
+                }
                 print(result)
-                input_values = calculate_inputs_for_machine(machine, requirements=requirements)
+                input_values = calculate_inputs_for_machine(
+                    machine, requirements=requirements)
                 if input_values:
                     pprint(input_values[0].hex())
-                    result['inputs'] = input_values                   
+                    result['inputs'] = input_values
                     yield result
                 else:
                     if e.func_type != "revert":
                         if machine.max_invocations > machine.current_invocation + 1:
-                            print('Adding machine back in fresh')
-                            #import pdb; pdb.set_trace()
                             machine.new_invocation()
                             possible_machines.append(machine)
 
             except Exception as e:
                 raise e
+
 
 def sated_solver_for_machine(machine, requirements=[]):
     solver = Solver()
@@ -84,6 +81,7 @@ def sated_solver_for_machine(machine, requirements=[]):
         return None
     return solver
 
+
 def calculate_inputs_for_machine(machine, requirements=[]):
     solver = sated_solver_for_machine(machine, requirements)
     if solver is None:
@@ -93,8 +91,8 @@ def calculate_inputs_for_machine(machine, requirements=[]):
     grouped_inputs = [{
         'input_symbols': [],
         'call_data_size': None
-    } for i in range(0,machine.current_invocation+1)]    
-    
+    } for i in range(0, machine.current_invocation+1)]
+
     for model_input in model:
         name = model_input.name()
         if name.startswith('input_'):
@@ -108,7 +106,8 @@ def calculate_inputs_for_machine(machine, requirements=[]):
     for grouped_input in grouped_inputs:
         inputs = sorted(grouped_input['input_symbols'], key=lambda x: x.name())
         values = [model[x] for x in inputs]
-        byte_values = [int(x.as_signed_long()).to_bytes(32, 'big', signed=True) for x in values]
+        byte_values = [int(x.as_signed_long()).to_bytes(
+            32, 'big', signed=True) for x in values]
         total_value = b''.join(byte_values)
 
         call_data_size = grouped_input['call_data_size']
@@ -128,6 +127,7 @@ def enum_for_return_type(return_type):
     if return_type == 'stop':
         return SpeculativeMachine.RETURN_TYPE_STOP
     raise Exception
+
 
 def get_symbol_invocation_from_name(name):
     # symbol names are structured like this: {symbolName}_{invocation}_{wordcount}

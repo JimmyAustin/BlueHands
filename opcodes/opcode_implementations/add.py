@@ -14,7 +14,6 @@ class AddOpcode(Opcode):
             val1 = bytes_to_int(val1)
             if value_is_constant(val2):
                 val2 = bytes_to_int(val2)
-                value = 1 if val1 == val2 else 0
                 machine.stack.push(int_to_bytes(val1 + val2))
             else:
                 machine.stack.push(val1 + val2)

@@ -17,7 +17,7 @@ for opcode_details in opcodes:
         opcode.execute(machine)
     except NotImplementedError:
         print(f"Missing: {opcode_details['text']}")
-    except Exception as e:
+    except Exception:
         implemented += 1
 
 print(f"Implemented: {implemented}, Total: {total}")

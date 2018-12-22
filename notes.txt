@@ -1,19 +1,14 @@
 # Word length is 32 bytes
 
-EVM Descriptions: https://solidity.readthedocs.io/en/v0.4.24/assembly.html
-YellowPaper: https://ethereum.github.io/yellowpaper/paper.pdf
+EVM Descriptions: https: // solidity.readthedocs.io/en/v0.4.24/assembly.html
+YellowPaper: https: // ethereum.github.io/yellowpaper/paper.pdf
 
 Examples
 
-https://github.com/CoinCulture/evm-tools/blob/master/analysis/guide.md
+https: // github.com/CoinCulture/evm-tools/blob/master/analysis/guide.md
 
 
-
-
-
-
-
-Variable inputs: 
+Variable inputs:
 
 function_call
 arguments
@@ -21,4 +16,4 @@ arguments
 
 Install Z3:
 
-python scripts/mk_make.py --prefix=/home/jamesaustin --python --pypkgdir=/home/jamesaustin/.local/lib/python3.6/site-packages
+python scripts/mk_make.py - -prefix = /home/jamesaustin - -python - -pypkgdir = /home/jamesaustin/.local/lib/python3.6/site-packages

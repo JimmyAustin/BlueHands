@@ -1,12 +1,9 @@
 from machine import Machine
-from speculative_machine import SpeculativeMachine 
-from opcode_generator import next_opcode_generator
-import io
-from utils import bytes_to_int
-from z3 import *
+from speculative_machine import SpeculativeMachine
 from opcodes.opcode_implementations import JumpiOpcode
-from exceptions import PathDivergenceException, ReturnException
-from speculative_machine_executor import SpeculativeMachineExecutor
+from exceptions import PathDivergenceException
+from z3 import Int, Solver, sat
+
 
 def test_jumpi():
     program = bytes.fromhex('6000356000525b600160005103600052600051600657')
@@ -33,6 +30,7 @@ def test_jumpi():
     machine.execute()
     print(f"Step Count: {machine.step_count}")
 
+
 def test_optimized_jumpi():
     program = bytes.fromhex('6000355b6001900380600357')
     input_data = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000005")
@@ -47,7 +45,6 @@ def test_optimized_jumpi():
     # 11     JUMPI
 
     machine = Machine(program, input_data)
-    #machine.dump_opcodes()
     machine.execute()
     print(f"Step Count: {machine.step_count}")
 
@@ -61,16 +58,16 @@ def test_constant_jump():
     # 5      JUMPI
 
     machine = SpeculativeMachine(program=program, logging=True)
-    #machine.dump_opcodes() 
-    machines = machine.step() # PUSH
-    machines = machines[0].step() # JUMPDEST
-    machines = machines[0].step() # PUSH 1
+    machines = machine.step()  # PUSH
+    machines = machines[0].step()  # JUMPDEST
+    machines = machines[0].step()  # PUSH 1
     try:
-        machines = machines[0].step() # JUMPI
+        machines = machines[0].step()  # JUMPI
     except Exception:
         pass
     assert machine.pc == 1
     assert machine.step_count == 4
+
 
 def test_symbolic_jump():
     x = Int('X')
@@ -78,14 +75,12 @@ def test_symbolic_jump():
     machine = SpeculativeMachine()
 
     machine.stack.push(x)
-    machine.stack.push(b'0x3E8') # 1000
-    
+    machine.stack.push(b'0x3E8')  # 1000
+
     jumpInstruction = JumpiOpcode()
-    didFail = False
     try:
         jumpInstruction.execute(machine)
     except PathDivergenceException as path_divergence:
-        didFail = True
         machines = path_divergence.possible_machines
 
     assert machines is not None

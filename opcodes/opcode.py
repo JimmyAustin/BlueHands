@@ -25,7 +25,6 @@ class Opcode:
     def pretty_str(self):
         def turn_to_hex(byte):
             return [x.hex() for x in byte]
-        #args = ','.join(['0x' + ''.join(turn_to_hex(x)) for x in self.args])
         args = ','.join(['0x' + x.hex() for x in self.args])
         return f"{self.text} {args}"
 

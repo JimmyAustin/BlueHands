@@ -1,5 +1,6 @@
 from io import StringIO
 
+
 class InputManager():
     def __init__(self, input_data):
         self.input = StringIO(input_data)

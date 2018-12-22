@@ -1,5 +1,6 @@
 from opcode_generator import next_opcode_generator
 import io
+from opcodes.opcode_builder import OpcodeBuilder
 
 
 class Contract():
@@ -17,19 +18,5 @@ class Contract():
         return set([x.text for x in self.opcodes])
 
     def missing_opcodes(self):
-        return [x for x in self.necessary_opcodes() if OpcodeBuilder.instruction_is_implemented(x) is False]
-
-# def binary_to_opcodes(binary_buffer):
-#     next_value = binary_buffer.read(2)
-#     binary_instructions = []
-#     locations = {}
-
-#     while len(next_value) == 2:
-#         print(next_value)
-#         op_code = OpcodeBuilder.build(next_value)
-
-#         argument_length = op_code.total_argument_length() * 2 # Reading in hex, but length is in bytes
-#         op_code.add_arguments(binary_buffer.read(argument_length))
-#         binary_instructions.append(op_code)
-#         next_value = binary_buffer.read(2)
-#     return binary_instructions
+        return [x for x in self.necessary_opcodes()
+                if OpcodeBuilder.instruction_is_implemented(x) is False]

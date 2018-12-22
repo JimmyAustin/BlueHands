@@ -1,5 +1,5 @@
 from machine import Machine
-from opcodes.opcode_implementations import AddOpcode, SubOpcode
+
 
 def test_add():
     program = bytes.fromhex('6003600401')
@@ -39,7 +39,7 @@ def test_sub():
     next_op = machine.get_next_opcode(step_pc=False)
     assert next_op.text == 'SUB'
     machine.step()
-    
+
     value = machine.stack.pop()
 
     assert value == b"\x01".rjust(32, b"\x00")

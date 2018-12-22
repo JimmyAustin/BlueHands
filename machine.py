@@ -1,10 +1,8 @@
 from stack import Stack
 from memory import Memory
 from storage import Storage
-import io
 from opcodes.opcode_builder import OpcodeBuilder
 import sha3
-from utils import bytes_to_int
 from copy import deepcopy
 from exceptions import ReturnException, ExecutionEndedException
 
@@ -62,7 +60,8 @@ class Machine:
         next_value = self.read_program_bytes()
         op_code = OpcodeBuilder.build(next_value)
 
-        argument_length = op_code.total_argument_length() # Reading in hex, but length is in bytes
+        # Reading in hex, but length is in bytes
+        argument_length = op_code.total_argument_length()
 
         op_code.add_arguments(self.read_program_bytes(argument_length))
 
@@ -80,13 +79,13 @@ class Machine:
         if next_opcode is None:
             raise ExecutionEndedException('Out of code to run')
         self.execute_opcode(next_opcode)
-        
 
     def execute(self, pdb_step=False):
         next_opcode = self.get_next_opcode()
         while next_opcode is not None:
             if pdb_step:
-                import pdb; pdb.set_trace()
+                import pdb
+                pdb.set_trace()
             self.execute_opcode(next_opcode)
             next_opcode = self.get_next_opcode()
 
@@ -104,8 +103,8 @@ class Machine:
         elif result['type'] == 'stop':
             raise ReturnException(None, result['func'])
 
-        import pdb; pdb.set_trace()
-
+        import pdb
+        pdb.set_trace()
 
     def print_state(self):
         print("---STACK---")
@@ -113,14 +112,13 @@ class Machine:
             print(f"{i}: 0x{hex_or_string(value)}")
 
         print("---STORAGE---")
-        for k,v in self.storage.storage.items():
+        for k, v in self.storage.storage.items():
             print(f"    {hex_or_string(k)}: {hex_or_string(v)}")
 
         print("---MEMORY---")
         for i in range(0, len(self.memory.data), 16):
             print(f"{str(i).zfill(4)} - {self.memory.debug_get(i, 32)}")
 #        print(self.memory.data)
-
 
     def dump_opcodes(self):
         next_opcode = self.get_next_opcode()
@@ -140,8 +138,9 @@ class Machine:
     def get_input_at_address(self, address):
         return self.input[address: address+32]
 
+
 def hex_or_string(value):
     try:
         return value.hex()
-    except Exception as e:
+    except Exception:
         return str(value)

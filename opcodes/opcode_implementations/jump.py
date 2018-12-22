@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import int_to_bytes, bytes_to_int
+from utils import bytes_to_int
 
 
 class JumpOpcode(Opcode):

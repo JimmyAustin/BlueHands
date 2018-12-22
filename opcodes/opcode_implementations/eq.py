@@ -2,6 +2,7 @@ from ..opcode import Opcode
 from z3 import If
 from utils import int_to_bytes, bytes_to_int, value_is_constant
 
+
 class EqOpcode(Opcode):
     def __init__(self, instruction):
         super().__init__(instruction)

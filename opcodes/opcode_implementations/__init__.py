@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from .stop import StopOpcode
 from .add import AddOpcode
 from .mul import MulOpcode

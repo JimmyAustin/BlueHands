@@ -1,7 +1,5 @@
 from machine import Machine
 from exceptions import ReturnException
-from opcode_generator import next_opcode_generator
-import io
 
 
 def test_return():
@@ -15,14 +13,14 @@ def test_return():
     # 12     RETURN'
 
     machine = Machine(program)
-    
+
     for i in range(5):
         machine.step()
     next_op = machine.get_next_opcode(step_pc=False)
-    
+
     assert next_op.text == 'RETURN'
     try:
-        result = machine.step()
+        machine.step()
         assert False
     except ReturnException as return_exception:
         assert return_exception.value[0] == 0x9

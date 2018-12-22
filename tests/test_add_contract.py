@@ -1,7 +1,6 @@
 from machine import Machine
-from opcode_generator import next_opcode_generator
-import io
 from utils import bytes_to_int
+
 
 def test_add_contract():
     binary_location = './contracts/build/add.bin'

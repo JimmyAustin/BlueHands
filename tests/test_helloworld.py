@@ -1,7 +1,6 @@
 from machine import Machine
-from opcode_generator import next_opcode_generator
-import io
-from utils import bytes_to_int, parse_solidity_returned_string
+from utils import parse_solidity_returned_string
+
 
 def test_hello_world_contract():
     binary_location = './contracts/build/helloWorld.bin'

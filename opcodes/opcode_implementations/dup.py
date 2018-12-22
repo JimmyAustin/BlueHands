@@ -1,5 +1,6 @@
 from ..opcode import Opcode
 
+
 class DupOpcode(Opcode):
     def __init__(self, instruction, length):
         self.length = length

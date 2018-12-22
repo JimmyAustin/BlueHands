@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from .opcode import Opcode
 from .opcode_implementations import *
 

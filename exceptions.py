@@ -3,6 +3,7 @@ class ReturnException(BaseException):
         self.value = value
         self.func_type = func_type
 
+
 class PathDivergenceException(BaseException):
     def __init__(self, possible_machines):
         self.possible_machines = possible_machines
@@ -10,6 +11,7 @@ class PathDivergenceException(BaseException):
 
 class ExecutionEndedException(BaseException):
     pass
+
 
 class StopException(BaseException):
     pass

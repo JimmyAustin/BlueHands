@@ -1,5 +1,6 @@
 from stack import Stack
 
+
 def test_stack_pop_push():
     stack = Stack()
     value = bytes(b"\x01") * 32
@@ -10,6 +11,7 @@ def test_stack_pop_push():
     returned_value = stack.pop()
 
     assert returned_value == value
+
 
 def test_stack_small_pop_push():
     stack = Stack()

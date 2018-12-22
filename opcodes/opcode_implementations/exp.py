@@ -7,7 +7,7 @@ class ExpOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        val1 = int.from_bytes(machine.stack.pop(), 'big')
-        val2 = int.from_bytes(machine.stack.pop(), 'big')
-        
+        val1 = bytes_to_int(machine.stack.pop())
+        val2 = bytes_to_int(machine.stack.pop())
+
         machine.stack.push(int_to_bytes(val1 ** val2))

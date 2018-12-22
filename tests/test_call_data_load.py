@@ -1,11 +1,12 @@
 from machine import Machine
-from opcode_generator import next_opcode_generator
-import io
 from utils import bytes_to_int
+
 
 def test_call_data_load():
     program = bytes.fromhex('60003560203501')
-    input_data = bytes.fromhex("00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000004")
+    input_string = "0000000000000000000000000000000000000000000000000000000000000005" + \
+                   "0000000000000000000000000000000000000000000000000000000000000004"
+    input_data = bytes.fromhex(input_string)
     # 0      PUSH1  => 00
     # 2      CALLDATALOAD
     # 3      PUSH1  => 20

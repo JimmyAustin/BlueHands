@@ -1,5 +1,6 @@
 from ..opcode import Opcode
 
+
 class GaspriceOpcode(Opcode):
     def __init__(self, instruction):
         super().__init__(instruction)

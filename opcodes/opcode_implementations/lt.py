@@ -26,7 +26,6 @@ class LtOpcode(Opcode):
             else:
                 machine.stack.push(If(val1 < val2, 1, 0))
 
-
         # val1 = bytes_to_int(machine.stack.pop())
         # val2 = bytes_to_int(machine.stack.pop())
         # value = 1 if val1 < val2 else 0

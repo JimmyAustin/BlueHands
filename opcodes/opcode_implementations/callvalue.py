@@ -1,6 +1,7 @@
 from ..opcode import Opcode
 from utils import int_to_bytes, value_is_constant
 
+
 class CallValueOpcode(Opcode):
     def __init__(self, instruction):
         super().__init__(instruction)

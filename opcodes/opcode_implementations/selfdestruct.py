@@ -1,5 +1,6 @@
 from ..opcode import Opcode
 
+
 class SelfdestructOpcode(Opcode):
     def __init__(self, instruction):
         super().__init__(instruction)

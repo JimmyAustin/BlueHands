@@ -1,7 +1,6 @@
 from machine import Machine
-from opcode_generator import next_opcode_generator
-import io
 from utils import bytes_to_int
+
 
 def test_push2():
     program = bytes.fromhex('61010161010201')

@@ -1,12 +1,12 @@
-from z3 import ArithRef
 from utils import value_is_constant
+
 
 class Stack():
     def __init__(self):
         self.stack = []
 
     def push(self, value):
-        if value_is_constant(value) == True:
+        if value_is_constant(value) is True:
             value = value.rjust(32, b"\x00")
         self.stack.append(value)
 
