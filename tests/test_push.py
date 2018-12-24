@@ -1,4 +1,4 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 from utils import bytes_to_int
 
 
@@ -8,7 +8,7 @@ def test_push2():
     # 3      PUSH2  => 0102
     # 6      ADD
 
-    machine = Machine(program)
+    machine = SpeculativeMachine(program, concrete_execution=True)
 
     next_op = machine.get_next_opcode(step_pc=False)
     assert next_op.text == 'PUSH2'

@@ -13,6 +13,9 @@ class SpeculativeMachineExecutor():
         self.starting_machine = starting_machine
         self.branches_evaluated = 0
 
+    def generate_single_possible_end(self, *args, **kwargs):
+        return self.generate_possible_ends(*args, **kwargs).__next__
+
     def possible_ends(self, *args, **kwargs):
         return list(self.generate_possible_ends(*args, **kwargs))
 

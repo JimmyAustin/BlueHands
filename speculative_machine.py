@@ -1,37 +1,43 @@
-from machine import Machine
-from exceptions import ExecutionEndedException
+import sha3
+from stack import Stack
+from memory import Memory
+from storage import Storage
+from exceptions import ExecutionEndedException, ReturnException
 from z3 import Int, BitVec, BitVecVal, Extract, Solver, sat
 from utils import bytes_to_int
 from stack import Stack
+from opcodes.opcode_builder import OpcodeBuilder
+from copy import deepcopy
 
 
-class SpeculativeMachine(Machine):
+class SpeculativeMachine():
     RETURN_TYPE_RETURN = Int(0)
     RETURN_TYPE_REVERT = Int(1)
     RETURN_TYPE_STOP = Int(2)
 
-    def __init__(self, inputs=[], max_invocations=1, *args, **kwargs):
-        self.inputs = inputs
+    def __init__(self, program=bytes(), input_data=bytes(), logging=False, call_value=0,
+                 inputs=[], max_invocations=1, concrete_execution=False):
+        self.pc = 0
+        self.program = program
+        self.stack = Stack()
+        self.memory = Memory()
+        self.storage = Storage()
+        self.logging = logging
+        self.step_count = 0
+        self.concrete_execution = concrete_execution
+
+        self.input_data = input_data
+        #self.inputs = inputs
         self.max_invocations = max_invocations
         self.current_invocation = -1  # This goes to zero when we invoke new_invocation
-        super().__init__(*args, **kwargs)
-        self.concrete_execution = False
         self.path_conditions = []
+        self.invocation_symbols = []
 
-        self.call_data_sizes = []
-        self.call_values = []
-        self.return_values = []
-        self.return_types = []
+        self.initial_wei = Int('InitialWei') # Initial amount in wei 
+        self.final_wei = Int('FinalWei') # Initial amount in wei
 
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = Int('LastReturnType')
-
-        # self.call_data_size = Int('CallDataSize')
-        # self.call_value = Int('CallValue')
-        # self.return_value = BitVec('ReturnValue', 256)
-        # self.return_type = Int('ReturnType')
-        self.generated_words = [[]]
-        self.generated_words_by_index = [{}]
 
         self.new_invocation()
 
@@ -39,14 +45,15 @@ class SpeculativeMachine(Machine):
         self.pc = 0
         self.current_invocation += 1
         self.stack = Stack()
-        self.generated_words.append([])
-        self.generated_words_by_index.append({})
-        self.call_data_sizes.append(
-            Int(f"CallDataSize_{self.current_invocation}"))
-        self.call_values.append(Int(f"CallValue_{self.current_invocation}"))
-        self.return_values.append(
-            BitVec(f"ReturnValue_{self.current_invocation}", 256))
-        self.return_types.append(Int(f"ReturnType_{self.current_invocation}"))
+        new_invocation_symbols = {
+            'input_words': [],
+            'input_words_by_index': {},
+            'call_data_size': Int(f"CallDataSize_{self.current_invocation}"),
+            'call_value': Int(f"CallValue_{self.current_invocation}"),
+            'return_value': BitVec(f"ReturnValue_{self.current_invocation}", 256),
+            'return_type': Int(f"ReturnType_{self.current_invocation}")
+        }
+        self.invocation_symbols.append(new_invocation_symbols)
 
     # In the speculative machine, if we step and get nothing back we assume that
     # the existing machine has been modified, and no other possible machine
@@ -62,33 +69,35 @@ class SpeculativeMachine(Machine):
         return result
 
     def machine_is_reachable(self):
-        import pdb
-        pdb.set_trace()
-
-    # def input_size(self): #Used for CallDataSizeOp
-    #     return len(self.inputs) * 4
-
-    def generated_words_up_to(self):
-        return len(self.generated_words[self.current_invocation]) * 32
+        import pdb; pdb.set_trace()
 
     def get_input_at_address(self, address):
-        while (address + 32) > self.generated_words_up_to():
-            input_address_name = len(self.generated_words[self.current_invocation]) * 32
-            new_input = BitVec(f"input_{self.current_invocation}_{input_address_name}", 256)
-            self.generated_words_by_index[self.current_invocation][len(
-                self.generated_words[self.current_invocation]) * 32] = new_input
-            self.generated_words[self.current_invocation].append(new_input)
+        if self.concrete_execution:
+            return self.input_data[address:address + 32]
 
-        if address in self.generated_words_by_index[self.current_invocation]:
-            return self.generated_words_by_index[self.current_invocation][address]
+        current_symbols = self.invocation_symbols[self.current_invocation]
+
+        def generated_words_up_to():
+            return len(current_symbols['input_words']) * 32
+
+        while (address + 32) > (len(current_symbols['input_words']) * 32):
+            input_address_name = len(current_symbols['input_words']) * 32
+            new_input = BitVec(f"input_{self.current_invocation}_{input_address_name}", 256)
+
+            current_symbols['input_words_by_index'][len(
+                current_symbols['input_words']) * 32] = new_input
+            current_symbols['input_words'].append(new_input)
+
+        if address in current_symbols['input_words_by_index']:
+            return current_symbols['input_words_by_index'][address]
 
         new_input = BitVec(f"input@{self.current_invocation}_{address}", 256)
 
-        self.generated_words_by_index[self.current_invocation][address] = new_input
+        current_symbols['input_words_by_index'][address] = new_input
         bitvec_offset = (address % 32)
-        previous_bitvec = self.generated_words[self.current_invocation][(
+        previous_bitvec = current_symbols['input_words'][(
             address - bitvec_offset) // 32]
-        next_bitvec = self.generated_words[self.current_invocation][(
+        next_bitvec = current_symbols['input_words'][(
             address + (32 + bitvec_offset)) // 32]
         print(f"Bitvec offset: {bitvec_offset}")
         overlap = bitvec_offset * 8  # - 1
@@ -123,3 +132,146 @@ class SpeculativeMachine(Machine):
         solver = Solver()
         solver.add(*self.path_conditions)
         return solver.check() == sat
+
+    def clone(self):
+        return deepcopy(self)
+
+    def clone_and_restart_execution(self):
+        clone = self.clone()
+        clone.pc = 0
+        clone.path_conditions = []
+        return clone
+
+    def dump_opcodes(self):
+        next_opcode = self.get_next_opcode()
+        while next_opcode is not None:
+            print(next_opcode.pretty_str())
+            next_opcode = self.get_next_opcode()
+
+    def print_state(self):
+        print("---STACK---")
+        for i, value in enumerate(reversed(self.stack.stack)):
+            print(f"{i}: 0x{hex_or_string(value)}")
+
+        print("---STORAGE---")
+        for k, v in self.storage.storage.items():
+            print(f"    {hex_or_string(k)}: {hex_or_string(v)}")
+
+        print("---MEMORY---")
+        for i in range(0, len(self.memory.data), 16):
+            print(f"{str(i).zfill(4)} - {self.memory.debug_get(i, 32)}")
+
+
+    def execute_opcode(self, opcode):
+        self.step_count += 1
+        if self.logging:
+            print(f"EXECUTING: {opcode.pretty_str()}")
+        result = opcode.execute(self)
+        if self.logging:
+            self.print_state()
+        if result is None:
+            return
+        elif result['type'] == 'return':
+            raise ReturnException(result.get('value'), result['func'])
+        elif result['type'] == 'stop':
+            raise ReturnException(None, result['func'])
+
+        import pdb
+        pdb.set_trace()
+
+    def execute_function_named(self, function_name, args):
+        k = sha3.keccak_256()
+        k.update(function_name.encode('utf8'))
+        function_sig = bytes.fromhex(k.hexdigest()[0:8])
+        return self.execute_deterministic_function(function_sig, args)
+
+    def execute_deterministic_function(self, function_sig, args, call_value=0):
+        with self.deterministic_context():
+            self.pc = 0
+            self.input_data = bytearray(function_sig)
+            for arg in args:
+                self.input_data.extend(arg.rjust(32, b"\x00"))
+            try:
+                self.execute(pdb_step=False)
+                return None
+            except ReturnException as return_e:
+                return return_e
+    
+    def deploy(self, program):
+        with self.deterministic_context():
+            self.program = program
+            self.pc = 0
+            try:
+                self.execute()
+            except ReturnException as return_e:
+                self.program = bytes(return_e.value)
+                self.pc = 0
+                print("Application deployed successfully")
+            except ExecutionEndedException:
+                print("No value was returned")
+                raise ExecutionEndedException
+
+    def get_next_opcode(self, step_pc=True):
+        if self.pc >= len(self.program):
+            return None
+        if step_pc is False:
+            original_pc = self.pc
+
+        next_value = self.read_program_bytes()
+        op_code = OpcodeBuilder.build(next_value)
+
+        # Reading in hex, but length is in bytes
+        argument_length = op_code.total_argument_length()
+
+        op_code.add_arguments(self.read_program_bytes(argument_length))
+
+        if step_pc is False:
+            self.pc = original_pc
+        return op_code
+
+    def read_program_bytes(self, length=1):
+        value = self.program[self.pc: (self.pc)+length]
+        self.pc += length
+        return value
+
+    def step(self):
+        next_opcode = self.get_next_opcode()
+        if next_opcode is None:
+            raise ExecutionEndedException('Out of code to run')
+        self.execute_opcode(next_opcode)
+
+    def execute(self, pdb_step=False):
+        next_opcode = self.get_next_opcode()
+        while next_opcode is not None:
+            if pdb_step:
+                import pdb
+                pdb.set_trace()
+            self.execute_opcode(next_opcode)
+            next_opcode = self.get_next_opcode()
+
+    def deterministic_context(self):
+        return DeterministicContext(self)
+
+
+class DeterministicContext:
+    def __init__(self, machine, call_value=0, input=bytes(), **kwargs):
+        self.machine = machine
+        self.arguments = kwargs
+        self.call_value = call_value
+    def __enter__(self):
+        current_invocation = self.machine.invocation_symbols[-1]
+        self.previous_execution = self.machine.concrete_execution
+        self.previous_call_value = current_invocation['call_value']
+        current_invocation['call_value'] = self.call_value
+
+    def __exit__(self, *args, **kwargs):
+        current_invocation = self.machine.invocation_symbols[-1]
+        self.machine.concrete_execution = self.previous_execution 
+        current_invocation['call_value'] = self.previous_call_value
+    
+
+def hex_or_string(value):
+    try:
+        return value.hex()
+    except Exception:
+        return str(value)

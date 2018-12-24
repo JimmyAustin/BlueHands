@@ -1,4 +1,4 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 from exceptions import ReturnException
 
 
@@ -12,7 +12,7 @@ def test_return():
     # 10     PUSH1  => 1f
     # 12     RETURN'
 
-    machine = Machine(program)
+    machine = SpeculativeMachine(program, concrete_execution=True)
 
     for i in range(5):
         machine.step()

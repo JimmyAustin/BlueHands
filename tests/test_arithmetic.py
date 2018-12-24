@@ -1,10 +1,10 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 
 
 def test_add():
     program = bytes.fromhex('6003600401')
 
-    machine = Machine(program)
+    machine = SpeculativeMachine(program, concrete_execution=True)
 
     next_op = machine.get_next_opcode(step_pc=False)
     assert next_op.text == 'PUSH1'
@@ -26,7 +26,7 @@ def test_add():
 def test_sub():
     program = bytes.fromhex('6003600403')
 
-    machine = Machine(program)
+    machine = SpeculativeMachine(program, concrete_execution=True)
 
     next_op = machine.get_next_opcode(step_pc=False)
     assert next_op.text == 'PUSH1'

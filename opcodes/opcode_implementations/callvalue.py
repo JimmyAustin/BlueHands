@@ -7,7 +7,7 @@ class CallValueOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        call_value = machine.call_value
+        call_value = machine.invocation_symbols[-1]['call_value']
         if value_is_constant(call_value):
             call_value = int_to_bytes(call_value)
         machine.stack.push(call_value)

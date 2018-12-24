@@ -1,4 +1,4 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 from utils import bytes_to_int
 
 
@@ -11,7 +11,7 @@ def test_add_contract():
 
     binary = load_binary(binary_location)
 
-    machine = Machine(binary, logging=True)
+    machine = SpeculativeMachine(binary, concrete_execution=True, logging=True)
 
     machine.deploy(binary)
     result = machine.execute_function_named('renderAdd()', [])

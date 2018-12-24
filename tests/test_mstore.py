@@ -1,4 +1,4 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 from utils import int_to_bytes
 
 
@@ -8,7 +8,7 @@ def test_mstore():
     # 5      PUSH1  => 00
     # 7      MSTORE
 
-    machine = Machine(program)
+    machine = SpeculativeMachine(program, concrete_execution=True)
 
     next_op = machine.get_next_opcode(step_pc=False)
     assert next_op.text == 'PUSH1'

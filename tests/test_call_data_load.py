@@ -1,4 +1,4 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 from utils import bytes_to_int
 
 
@@ -13,7 +13,7 @@ def test_call_data_load():
     # 5      CALLDATALOAD
     # 6      ADD
 
-    machine = Machine(program, input_data)
+    machine = SpeculativeMachine(program, input_data, concrete_execution=True)
 
     next_op = machine.get_next_opcode(step_pc=False)
     assert next_op.text == 'PUSH1'

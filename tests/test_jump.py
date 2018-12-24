@@ -1,4 +1,3 @@
-from machine import Machine
 from speculative_machine import SpeculativeMachine
 from opcodes.opcode_implementations import JumpiOpcode
 from exceptions import PathDivergenceException
@@ -24,9 +23,9 @@ def test_jumpi():
     # 19     PUSH1  => 06
     # 21     JUMPI
 
-    machine = Machine(program, input_data)
+    machine = SpeculativeMachine(program=program, input_data=input_data, concrete_execution=True)
     machine.dump_opcodes()
-    machine = Machine(program, input_data)
+    machine = SpeculativeMachine(program=program, input_data=input_data, concrete_execution=True, logging=True)
     machine.execute()
     print(f"Step Count: {machine.step_count}")
 
@@ -44,7 +43,7 @@ def test_optimized_jumpi():
     # 9      PUSH1  => 03
     # 11     JUMPI
 
-    machine = Machine(program, input_data)
+    machine = SpeculativeMachine(program=program, input_data=input_data, concrete_execution=True)
     machine.execute()
     print(f"Step Count: {machine.step_count}")
 
@@ -57,12 +56,15 @@ def test_constant_jump():
     # 4      PUSH1  => 01
     # 5      JUMPI
 
-    machine = SpeculativeMachine(program=program, logging=True)
-    machines = machine.step()  # PUSH
-    machines = machines[0].step()  # JUMPDEST
-    machines = machines[0].step()  # PUSH 1
+    machine = SpeculativeMachine(program=program, concrete_execution=True, logging=True)
+    machine.step()
+    machine.step()
+    machine.step()
+    # machines = machine.step()  # PUSH
+    # machines = machines[0].step()  # JUMPDEST
+    # machines = machines[0].step()  # PUSH 1
     try:
-        machines = machines[0].step()  # JUMPI
+        machine.step()  # JUMPI
     except Exception:
         pass
     assert machine.pc == 1

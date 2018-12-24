@@ -8,7 +8,7 @@ class CalldatasizeOpcode(Opcode):
 
     def execute(self, machine):
         if machine.concrete_execution:
-            length = len(machine.input)
+            length = len(machine.input_data)
             machine.stack.push(int_to_bytes(length))
         else:
-            machine.stack.push(machine.call_data_sizes[-1])
+            machine.stack.push(machine.invocation_symbols[-1]['call_data_size'])

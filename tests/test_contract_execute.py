@@ -1,4 +1,4 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 from utils import bytes_to_int, int_to_bytes
 
 
@@ -15,7 +15,7 @@ def test_functionless_contract_execute():
     # 13     PUSH1  => 04
     # 15     ADD')
 
-    machine = Machine(logging=True)
+    machine = SpeculativeMachine(concrete_execution=True, logging=True)
     machine.deploy(program)
 
     assert machine.program == bytes.fromhex('6005600401')
@@ -57,7 +57,7 @@ def test_function_contract_execute():
     # 37     PUSH1  => 18
     # 39     JUMP
 
-    machine = Machine(program, logging=True)
+    machine = SpeculativeMachine(program, concrete_execution=True, logging=True)
     result = machine.execute_function_named('add(int256,int256)', [int_to_bytes(5),
                                                                    int_to_bytes(9)])
     assert result.func_type == 'stop'
