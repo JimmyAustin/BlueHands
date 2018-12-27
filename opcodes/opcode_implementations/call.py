@@ -6,4 +6,5 @@ class CallOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
+        import pdb; pdb.set_trace()
         raise NotImplementedError

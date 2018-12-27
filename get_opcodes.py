@@ -1,7 +1,6 @@
-from machine import Machine
+from speculative_machine import SpeculativeMachine
 
-
-binary_location = './contracts/build/helloWorld.bin'
+binary_location = './contracts/build/bankCFOVuln.bin'
 
 
 def load_binary(path):
@@ -11,5 +10,5 @@ def load_binary(path):
 
 binary = load_binary(binary_location)
 
-executor = Machine(binary)
+executor = SpeculativeMachine(binary)
 executor.dump_opcodes()

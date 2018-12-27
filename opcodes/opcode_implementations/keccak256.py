@@ -1,4 +1,5 @@
 from ..opcode import Opcode
+import sha3
 
 
 class Keccak256Opcode(Opcode):
@@ -6,13 +7,9 @@ class Keccak256Opcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise NotImplementedError
-        # address = machine.stack.pop()
-        # value = machine.stack.pop()
-        # memory = machine.memory.get(address, length)
-        # from Crypto.Hash import keccak
-        # keccak_hash = keccak.new(digest_bits=256)
-        # keccak_hash.update('age')
-        # import pdb
-        # pdb.set_trace()
-        # machine.stack.push()
+        address = machine.stack.pop()
+        length = machine.stack.pop()
+        memory_value = machine.memory.get(address, length)
+        k = sha3.keccak_256()
+        k.update(memory_value)
+        machine.stack.push(k.digest())

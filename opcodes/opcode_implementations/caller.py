@@ -6,4 +6,4 @@ class CallerOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise NotImplementedError
+        machine.stack.push(machine.sender)

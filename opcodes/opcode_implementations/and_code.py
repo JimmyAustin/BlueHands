@@ -1,14 +1,25 @@
 from ..opcode import Opcode
-from utils import int_to_bytes, bytes_to_int
-
+from utils import value_is_constant, bytes_to_uint
+from z3 import And
 
 class AndOpcode(Opcode):
     def __init__(self, instruction):
         super().__init__(instruction)
 
     def execute(self, machine):
-        val1 = bytes_to_int(machine.stack.pop())
-        val2 = bytes_to_int(machine.stack.pop())
-        value = val1 & val2
+        val1 = machine.stack.pop()
+        val2 = machine.stack.pop()
 
-        machine.stack.push(int_to_bytes(value))
+        if value_is_constant(val1):
+            if value_is_constant(val2):
+                machine.stack.push(bytes([x & y for x,y in zip(val1, val2)]))
+            else:
+                val1 = bytes_to_uint(val1)
+
+                machine.stack.push(val1 & val2)
+        else:
+            if value_is_constant(val2):
+                val2 = bytes_to_uint(val2)
+                machine.stack.push(val1 & val2)
+            else:
+                machine.stack.push(val1 & val2)

@@ -1,4 +1,4 @@
 [flake8]
-max-line-length = 100
+max-line-length = 80
 per-file-ignores =
 	opcodes/opcode_implementations/__init__.py: F401

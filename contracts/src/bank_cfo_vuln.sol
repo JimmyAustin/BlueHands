@@ -15,7 +15,7 @@ contract bankCFOVuln {
     function _withdraw(address withdrawAddress, uint withdraw_amount) private {
         require(deposits[withdrawAddress] >= withdraw_amount);
         deposits[withdrawAddress] -= withdraw_amount;
-        msg.sender.call.value(withdraw_amount);
+        msg.sender.call.value(withdraw_amount)("");
     }
 
     function withdraw(uint amount) public {

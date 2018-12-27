@@ -4,7 +4,7 @@ from memory import Memory
 from storage import Storage
 from exceptions import ExecutionEndedException, ReturnException
 from z3 import Int, BitVec, BitVecVal, Extract, Solver, sat
-from utils import bytes_to_int
+from utils import bytes_to_int, pad_bytes_to_address
 from stack import Stack
 from opcodes.opcode_builder import OpcodeBuilder
 from copy import deepcopy
@@ -16,7 +16,8 @@ class SpeculativeMachine():
     RETURN_TYPE_STOP = Int(2)
 
     def __init__(self, program=bytes(), input_data=bytes(), logging=False, call_value=0,
-                 inputs=[], max_invocations=1, concrete_execution=False):
+                 inputs=[], max_invocations=1, concrete_execution=False,
+                 sender=pad_bytes_to_address(b'attacker')):
         self.pc = 0
         self.program = program
         self.stack = Stack()
@@ -26,6 +27,9 @@ class SpeculativeMachine():
         self.step_count = 0
         self.concrete_execution = concrete_execution
 
+        self.sender = sender
+
+        self.attacker_wallet = Int('AttackerWallet')
         self.input_data = input_data
         #self.inputs = inputs
         self.max_invocations = max_invocations
@@ -34,7 +38,8 @@ class SpeculativeMachine():
         self.invocation_symbols = []
 
         self.initial_wei = Int('InitialWei') # Initial amount in wei 
-        self.final_wei = Int('FinalWei') # Initial amount in wei
+        self.final_wei = Int('FinalWei') # Final amount in wei
+        self.current_wei = Int('CurrentWei') # Current amount in wei
 
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = Int('LastReturnType')
@@ -53,6 +58,7 @@ class SpeculativeMachine():
             'return_value': BitVec(f"ReturnValue_{self.current_invocation}", 256),
             'return_type': Int(f"ReturnType_{self.current_invocation}")
         }
+        self.current_wei = self.current_wei + new_invocation_symbols['call_value']
         self.invocation_symbols.append(new_invocation_symbols)
 
     # In the speculative machine, if we step and get nothing back we assume that
@@ -185,13 +191,14 @@ class SpeculativeMachine():
         function_sig = bytes.fromhex(k.hexdigest()[0:8])
         return self.execute_deterministic_function(function_sig, args)
 
-    def execute_deterministic_function(self, function_sig, args, call_value=0):
-        with self.deterministic_context():
+    def execute_deterministic_function(self, function_sig, args, **kwargs):
+        with self.deterministic_context(**kwargs):
             self.pc = 0
             self.input_data = bytearray(function_sig)
             for arg in args:
                 self.input_data.extend(arg.rjust(32, b"\x00"))
             try:
+                import pdb; pdb.set_trace()
                 self.execute(pdb_step=False)
                 return None
             except ReturnException as return_e:
@@ -243,32 +250,44 @@ class SpeculativeMachine():
     def execute(self, pdb_step=False):
         next_opcode = self.get_next_opcode()
         while next_opcode is not None:
-            if pdb_step:
-                import pdb
-                pdb.set_trace()
             self.execute_opcode(next_opcode)
             next_opcode = self.get_next_opcode()
 
-    def deterministic_context(self):
-        return DeterministicContext(self)
+    def deterministic_context(self, **kwargs):
+        return DeterministicContext(self, **kwargs)
 
 
 class DeterministicContext:
-    def __init__(self, machine, call_value=0, input=bytes(), **kwargs):
+    def __init__(self, machine, sender=None, call_value=None):
         self.machine = machine
-        self.arguments = kwargs
         self.call_value = call_value
+        self.sender = sender
     def __enter__(self):
         current_invocation = self.machine.invocation_symbols[-1]
-        self.previous_execution = self.machine.concrete_execution
-        self.previous_call_value = current_invocation['call_value']
-        current_invocation['call_value'] = self.call_value
+                
+        self.previous_execution_type = self.machine.concrete_execution
+
+        self.machine.concrete_execution = True
+        
+        if self.sender is not None:
+            self.previous_sender = self.machine.sender
+            self.machine.sender = self.sender
+
+        if self.call_value is not None:
+            self.previous_call_value = current_invocation['call_value']
+            current_invocation['call_value'] = self.call_value
 
     def __exit__(self, *args, **kwargs):
         current_invocation = self.machine.invocation_symbols[-1]
-        self.machine.concrete_execution = self.previous_execution 
-        current_invocation['call_value'] = self.previous_call_value
-    
+
+        self.machine.concrete_execution = self.previous_execution_type 
+
+        if self.sender is not None:
+            self.machine.sender = self.previous_sender
+
+        if self.call_value is not None:        
+            current_invocation['call_value'] = self.call_value
+
 
 def hex_or_string(value):
     try:
