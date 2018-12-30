@@ -1,6 +1,6 @@
 from speculative_machine import SpeculativeMachine
 
-binary_location = './contracts/build/bankCFOVuln.bin'
+binary_location = './contracts/build/password_withdraw.bin'
 
 
 def load_binary(path):

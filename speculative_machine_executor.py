@@ -1,8 +1,9 @@
 from exceptions import PathDivergenceException, ReturnException
-from z3 import Solver, sat, BitVecVal
+from z3 import Solver, sat, BitVecVal, Z3Exception, BitVec
 from speculative_machine import SpeculativeMachine
-from utils import value_is_constant
+from utils import value_is_constant, pad_bytes_to_address, bytes_to_uint
 from pprint import pprint
+from method_identifier import identify_methods, identify_path_conditions
 
 
 class SpeculativeMachineExecutor():
@@ -34,10 +35,12 @@ class SpeculativeMachineExecutor():
                         print("Adding new invocation")
                         possible_machines.append(machine)
             except ReturnException as e:
-                if e.func_type == 'revert':
-                    continue
-                else:
-                    machine.print_state()
+                print(identify_methods(machine))
+                print(f"{e.func_type} = {e.value}")
+                # if e.should_revert:
+                #     continue
+                # else:
+                #     machine.print_state()
                 return_value = e.value
 
                 if return_value is not None and value_is_constant(return_value) is True:
@@ -45,37 +48,56 @@ class SpeculativeMachineExecutor():
                         int.from_bytes(return_value, 'big'), 256)
 
                 return_type_enum = enum_for_return_type(e.func_type)
+
                 requirements = [*additional_requirements,
                                 *acceptance_criteria,
                                 machine.last_return_type == return_type_enum,
-                                machine.last_return_value == return_value]
+                                machine.attacker_wallet == get_wallet_amount(machine, machine.sender_address)
+                                ]
+
+                if return_value is not None:
+                    requirements.append(machine.last_return_value == return_value)
+   
                 result = {
                     'machine': machine,
                     'type': e.func_type,
                     'value': e.value,
                     'path_conditions': machine.path_conditions,
-                    'invocations': machine.current_invocation
+                    'invocations': machine.current_invocation,
+                    'requirements': requirements,
+                    'methods': identify_methods(machine)
                 }
                 print(result)
-                input_values = calculate_inputs_for_machine(
+                input_values = calculate_results_for_machine(
                     machine, requirements=requirements)
+
                 if input_values:
-                    pprint(input_values[0].hex())
-                    result['inputs'] = input_values
+                    result['results'] = input_values
+                    print*(input_values)
                     yield result
                 else:
-                    if e.func_type != "revert":
-                        if machine.max_invocations > machine.current_invocation + 1:
-                            machine.new_invocation()
-                            possible_machines.append(machine)
+                    if machine.max_invocations > machine.current_invocation + 1:
+                        machine.new_invocation()
+                        possible_machines.append(machine)
 
             except Exception as e:
                 raise e
 
+def get_wallet_amount(machine, address):    
+    value = machine.wallet_amounts.get(address, bytes(0))
+    if value_is_constant(value) is False:
+        return value
+    return bytes_to_uint(value)
+
+def return_type_should_revert(return_type):
+    return return_type == 'revert' or return_type == 'invalid'
+
 
 def sated_solver_for_machine(machine, requirements=[]):
     solver = Solver()
-    solver.add(*machine.path_conditions, *requirements)
+    solver.add(*machine.path_conditions, 
+               *requirements,
+               *[v >= 0 for _, v in machine.wallet_amounts.items() if value_is_constant(v) is False])
     # for condition in machine.path_conditions:
     #     pprint(condition)
     # for condition in requirements:
@@ -84,8 +106,16 @@ def sated_solver_for_machine(machine, requirements=[]):
         return None
     return solver
 
+def sub_wallet_amounts_for_variables(machine):
+    # This seems like a hack. We should consider removing.
+    for k, v in machine.wallet_amounts.items():
+        if value_is_constant(v) is False:
+            symbol = BitVec(f"{k.hex()}_Wallet", 256)
+            machine.path_conditions.append(symbol == v)
+            machine.wallet_amounts[k] = symbol
 
-def calculate_inputs_for_machine(machine, requirements=[]):
+def calculate_results_for_machine(machine, requirements=[]):
+    #sub_wallet_amounts_for_variables(machine)
     solver = sated_solver_for_machine(machine, requirements)
     if solver is None:
         return None
@@ -119,8 +149,28 @@ def calculate_inputs_for_machine(machine, requirements=[]):
             call_data_length = int(model[call_data_size].as_long())
             total_value = total_value[:call_data_length]
         grouped_input['result'] = total_value
-    return [x['result'] for x in grouped_inputs]
+    return {
+        'inputs': [{
+            'input_data': x['result'],
+            'call_data_size': get_field(model, x['call_data_size']),
+        }
+        for x in grouped_inputs],
+        #'wallets': generate_wallet_values(machine, model)
+    }
 
+def generate_wallet_values(machine, model):
+    def get_value(wallet_value):
+        if value_is_constant(wallet_value):
+            return wallet_value
+        return model[wallet_value]
+
+    return {k: get_value(value) for k, value in machine.wallet_amounts.items()}
+
+def get_field(model, field):
+    try:
+        return model[field]
+    except Z3Exception:
+        return None
 
 def enum_for_return_type(return_type):
     if return_type == 'return':
@@ -129,6 +179,8 @@ def enum_for_return_type(return_type):
         return SpeculativeMachine.RETURN_TYPE_REVERT
     if return_type == 'stop':
         return SpeculativeMachine.RETURN_TYPE_STOP
+    if return_type == 'invalid':
+        return SpeculativeMachine.RETURN_TYPE_INVALID
     raise Exception
 
 

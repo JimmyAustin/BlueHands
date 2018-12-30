@@ -41,6 +41,7 @@ def value_is_constant(value):
 def parse_solidity_abi_input(input_value):
     if len(input_value) == 0:
         return None
+
     return {
         'func': input_value[0:4],
         'args': [input_value[x:x+32] for x in range(4, len(input_value), 32)]

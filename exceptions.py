@@ -3,6 +3,13 @@ class ReturnException(BaseException):
         self.value = value
         self.func_type = func_type
 
+        self.should_revert = {
+            'return': False,
+            'revert': True,
+            'stop': False,
+            'invalid': True
+        }[func_type]
+
 
 class PathDivergenceException(BaseException):
     def __init__(self, possible_machines):
@@ -15,3 +22,7 @@ class ExecutionEndedException(BaseException):
 
 class StopException(BaseException):
     pass
+
+class EmptyWalletException(BaseException):
+    def __init(self, address):
+        self.address = address

@@ -2,22 +2,27 @@ import sha3
 from stack import Stack
 from memory import Memory
 from storage import Storage
-from exceptions import ExecutionEndedException, ReturnException
+from exceptions import ExecutionEndedException, ReturnException, EmptyWalletException
 from z3 import Int, BitVec, BitVecVal, Extract, Solver, sat
-from utils import bytes_to_int, pad_bytes_to_address
+from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint
 from stack import Stack
 from opcodes.opcode_builder import OpcodeBuilder
 from copy import deepcopy
 
 
 class SpeculativeMachine():
-    RETURN_TYPE_RETURN = Int(0)
-    RETURN_TYPE_REVERT = Int(1)
-    RETURN_TYPE_STOP = Int(2)
+    # RETURN_TYPE_RETURN = Int(0)
+    # RETURN_TYPE_REVERT = Int(1)
+    # RETURN_TYPE_STOP = Int(2)
+    RETURN_TYPE_RETURN = 0
+    RETURN_TYPE_REVERT = 1
+    RETURN_TYPE_STOP = 2
+    RETURN_TYPE_INVALID = 3
+
 
     def __init__(self, program=bytes(), input_data=bytes(), logging=False, call_value=0,
                  inputs=[], max_invocations=1, concrete_execution=False,
-                 sender=pad_bytes_to_address(b'attacker')):
+                 sender_address=pad_bytes_to_address(b'attacker'), contract_address=pad_bytes_to_address(b'contract')):
         self.pc = 0
         self.program = program
         self.stack = Stack()
@@ -27,9 +32,11 @@ class SpeculativeMachine():
         self.step_count = 0
         self.concrete_execution = concrete_execution
 
-        self.sender = sender
+        self.sender_address = sender_address
+        self.contract_address = contract_address
 
-        self.attacker_wallet = Int('AttackerWallet')
+        self.attacker_wallet = BitVec('AttackerWallet', 256)
+        self.wallet_amounts = {}
         self.input_data = input_data
         #self.inputs = inputs
         self.max_invocations = max_invocations
@@ -37,28 +44,27 @@ class SpeculativeMachine():
         self.path_conditions = []
         self.invocation_symbols = []
 
-        self.initial_wei = Int('InitialWei') # Initial amount in wei 
-        self.final_wei = Int('FinalWei') # Final amount in wei
-        self.current_wei = Int('CurrentWei') # Current amount in wei
-
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = Int('LastReturnType')
 
         self.new_invocation()
 
     def new_invocation(self):
+        print("New invocation")
         self.pc = 0
         self.current_invocation += 1
         self.stack = Stack()
         new_invocation_symbols = {
             'input_words': [],
             'input_words_by_index': {},
+            'current_gas': BitVec(f"Gas_{self.current_invocation}", 256),
+
             'call_data_size': Int(f"CallDataSize_{self.current_invocation}"),
-            'call_value': Int(f"CallValue_{self.current_invocation}"),
+            'call_value': BitVec(f"CallValue_{self.current_invocation}", 256),
             'return_value': BitVec(f"ReturnValue_{self.current_invocation}", 256),
             'return_type': Int(f"ReturnType_{self.current_invocation}")
         }
-        self.current_wei = self.current_wei + new_invocation_symbols['call_value']
+        self.credit_wallet_amount(self.contract_address, new_invocation_symbols['call_value'])
         self.invocation_symbols.append(new_invocation_symbols)
 
     # In the speculative machine, if we step and get nothing back we assume that
@@ -105,9 +111,7 @@ class SpeculativeMachine():
             address - bitvec_offset) // 32]
         next_bitvec = current_symbols['input_words'][(
             address + (32 + bitvec_offset)) // 32]
-        print(f"Bitvec offset: {bitvec_offset}")
         overlap = bitvec_offset * 8  # - 1
-        print(f"Overlap: {overlap}")
         end = 255
 
         # These are indexed in the opposite of the way you would expect.
@@ -167,11 +171,15 @@ class SpeculativeMachine():
         for i in range(0, len(self.memory.data), 16):
             print(f"{str(i).zfill(4)} - {self.memory.debug_get(i, 32)}")
 
+        print("---WALLETS---")
+        for address, value in self.wallet_amounts.items():
+            print(f"{address} = {value}")
+
 
     def execute_opcode(self, opcode):
         self.step_count += 1
         if self.logging:
-            print(f"EXECUTING: {opcode.pretty_str()}")
+            print(f"EXECUTING: {opcode.pretty_str()} ({self.pc})")
         result = opcode.execute(self)
         if self.logging:
             self.print_state()
@@ -191,19 +199,31 @@ class SpeculativeMachine():
         function_sig = bytes.fromhex(k.hexdigest()[0:8])
         return self.execute_deterministic_function(function_sig, args)
 
-    def execute_deterministic_function(self, function_sig, args, **kwargs):
-        with self.deterministic_context(**kwargs):
+    def reset_temp_state(self):
+        self.stack = Stack()
+        self.pc = 0
+
+
+    def execute_deterministic_function(self, function_sig, args, call_value=bytes(32), **kwargs):
+        self.reset_temp_state()
+        with self.deterministic_context(call_value=call_value, **kwargs):
+            self.credit_wallet_amount(self.contract_address, bytes_to_uint(call_value))
             self.pc = 0
             self.input_data = bytearray(function_sig)
             for arg in args:
                 self.input_data.extend(arg.rjust(32, b"\x00"))
+            print(f"EXECUTING: 0x{self.input_data.hex()}")
             try:
-                import pdb; pdb.set_trace()
                 self.execute(pdb_step=False)
+                self.reset_temp_state()
                 return None
             except ReturnException as return_e:
-                return return_e
-    
+                self.reset_temp_state()
+                if return_e.func_type == 'revert':
+                    raise return_e
+                else:
+                    return return_e
+
     def deploy(self, program):
         with self.deterministic_context():
             self.program = program
@@ -211,6 +231,8 @@ class SpeculativeMachine():
             try:
                 self.execute()
             except ReturnException as return_e:
+                if return_e.func_type == 'revert':
+                    raise ExecutionEndedException('Deployment Reverted')
                 self.program = bytes(return_e.value)
                 self.pc = 0
                 print("Application deployed successfully")
@@ -230,7 +252,8 @@ class SpeculativeMachine():
         # Reading in hex, but length is in bytes
         argument_length = op_code.total_argument_length()
 
-        op_code.add_arguments(self.read_program_bytes(argument_length))
+        args = self.read_program_bytes(argument_length)
+        op_code.add_arguments(args)
 
         if step_pc is False:
             self.pc = original_pc
@@ -248,17 +271,48 @@ class SpeculativeMachine():
         self.execute_opcode(next_opcode)
 
     def execute(self, pdb_step=False):
-        next_opcode = self.get_next_opcode()
-        while next_opcode is not None:
-            self.execute_opcode(next_opcode)
+        try:
             next_opcode = self.get_next_opcode()
+            while next_opcode is not None:
+                self.execute_opcode(next_opcode)
+                next_opcode = self.get_next_opcode()
+        except ReturnException as e:
+            if e.should_revert is True:
+                # Add reversion logic here?
+                pass
+            raise e
 
     def deterministic_context(self, **kwargs):
         return DeterministicContext(self, **kwargs)
 
+    def get_wallet_amount(self, address):
+        if to_address in machine.wallet_amounts:
+            return machine.wallet_amounts[to_address]
+        else:
+            return 0
+
+    def credit_wallet_amount(self, to_address, value):
+        if to_address in self.wallet_amounts:
+            self.wallet_amounts[to_address] += value
+        else:
+            self.wallet_amounts[to_address] = value
+
+    def debit_wallet_amount(self, address, value):
+        if address in self.wallet_amounts:
+            if value_is_constant(value):
+                value = bytes_to_int(value)
+            self.wallet_amounts[address] -= value
+            if value_is_constant(self.wallet_amounts[address]):
+                if self.wallet_amounts[address] < 0:
+                    raise EmptyWalletException(address)
+            else:
+                self.path_conditions.append(self.wallet_amounts[address] >= 0)
+        else:
+            raise EmptyWalletException(address)
+
 
 class DeterministicContext:
-    def __init__(self, machine, sender=None, call_value=None):
+    def __init__(self, machine, sender=None, call_value=bytes(32)):
         self.machine = machine
         self.call_value = call_value
         self.sender = sender
@@ -270,8 +324,8 @@ class DeterministicContext:
         self.machine.concrete_execution = True
         
         if self.sender is not None:
-            self.previous_sender = self.machine.sender
-            self.machine.sender = self.sender
+            self.previous_sender = self.machine.sender_address
+            self.machine.sender_address = self.sender
 
         if self.call_value is not None:
             self.previous_call_value = current_invocation['call_value']
@@ -283,10 +337,10 @@ class DeterministicContext:
         self.machine.concrete_execution = self.previous_execution_type 
 
         if self.sender is not None:
-            self.machine.sender = self.previous_sender
+            self.machine.sender_address = self.previous_sender
 
         if self.call_value is not None:        
-            current_invocation['call_value'] = self.call_value
+            current_invocation['call_value'] = self.previous_call_value
 
 
 def hex_or_string(value):

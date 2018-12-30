@@ -6,4 +6,5 @@ class GasOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise NotImplementedError
+        # TODO: Gas in general needs an overhaul and implementation
+        machine.stack.push(machine.invocation_symbols[-1]['current_gas'])

