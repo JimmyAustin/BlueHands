@@ -21,11 +21,10 @@ def identify_methods(machine):
 # 0
 
 def identify_path_conditions(path_condition):
-    #import pdb; pdb.set_trace()
     if path_condition.__class__ != BoolRef:
         return None
 
-    if path_condition.decl().__repr__() != 'Distinct': # Todo: Find something better then this
+    if path_condition.decl().name() != 'distinct': # Todo: Find something better then this
         return None
 
     children = path_condition.children()
@@ -33,10 +32,11 @@ def identify_path_conditions(path_condition):
         return None
 
     if_statement = children[0]
-    if if_statement.__class__ != ArithRef:
+    if_statement_children = if_statement.children()
+
+    if len(if_statement_children) != 3:
         return None
 
-    if_statement_children = if_statement.children()
     if if_statement_children[1].params()[0] != '1' or if_statement_children[2].params()[0] != '0':
         return None
     
@@ -75,5 +75,7 @@ def name_for_function_sig(sig):
         '846719e0': 'get(int256)',
         'e5c19b2d': 'set(int256)',
         'a5f3c23b': 'add(int256,int256)',
+        '7e62eab8': 'withdraw(int256)',
         '6d4ce63c': 'get()',
+        'ad065eb5': 'canIdentifySender(address)',
     }.get(sig, f"Unknown Method: {sig}")

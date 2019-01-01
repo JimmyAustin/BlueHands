@@ -7,4 +7,5 @@ class JumpOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        machine.pc = bytes_to_int(machine.stack.pop())
+        address = machine.stack.pop()
+        machine.pc = bytes_to_int(address)

@@ -1,5 +1,7 @@
 import sha3
 from string import hexdigits
+from z3 import Int2BV, BitVecVal
+
 
 def uint_to_bytes(val):
     return int.to_bytes(val, 32, 'big', signed=False)
@@ -61,4 +63,17 @@ def pad_bytes_to_address(value):
 
 # Removes random white space, and gets it ready as bytes.
 def ready_hex(value):
-    return bytes.fromhex(''.join([x for x in value if x in hexdigits]))
+    return bytes.fromhex(''.join([x for x in value if x in hexdigits]))    
+
+# It seems the base implementation of inv2bv creates 256 seperate variables, 
+# but we can shortcut this process if the value being handed in is a if statement
+
+def opt_int2bv(value):
+    # if value.decl().name() == 'if':
+    #     children = value.children()
+        
+    import pdb; pdb.set_trace()
+    return Int2BV(value, 256)
+
+bv0 = BitVecVal(0, 256)
+bv1 = BitVecVal(1, 256)

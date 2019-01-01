@@ -21,6 +21,7 @@ build_contracts:
 	$(call compile_file,./contracts/src/bank_cfo_vuln.sol)
 	$(call compile_file,./contracts/src/symbolic_return.sol)
 	$(call compile_file,./contracts/src/set_add.sol)
+	$(call compile_file,./contracts/src/address_return.sol)
 	$(call compile_file,./contracts/src/password_withdraw.sol)
 
 lint:

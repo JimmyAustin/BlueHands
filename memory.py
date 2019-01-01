@@ -1,4 +1,5 @@
-from utils import value_is_constant
+from utils import value_is_constant, opt_int2bv
+
 
 MEMORY_CONCRETE = 0
 MEMORY_APPROX = 1
@@ -24,6 +25,9 @@ class Memory:
             for i, byte in enumerate(value):
                 self.data[address+i] = (MEMORY_CONCRETE, byte, None)
         else:
+            if getattr(value, 'size', None) is None:
+                value = opt_int2bv(value)
+
             self.expand(address + (value.size() // 8))
 
             for i in range(value.size() // 8):

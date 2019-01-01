@@ -1,5 +1,6 @@
 class InvalidOpcode():
     def __init__(self, instruction):
+        self.instruction = instruction.hex()
         pass
         #super().__init__(instruction)
 
@@ -10,10 +11,12 @@ class InvalidOpcode():
         pass
 
     def execute(self, machine):
+        import pdb; pdb.set_trace()
         return {
             'type': 'return',
             'func': 'invalid',
-            'value': bytes()
+            'pc': machine.pc,
+            'value': self.instruction
         }
 
     def pretty_str(self):

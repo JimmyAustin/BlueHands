@@ -1,4 +1,5 @@
 from ..opcode import Opcode
+from utils import int_to_bytes
 
 
 class CallOpcode(Opcode):
@@ -20,6 +21,7 @@ class CallOpcode(Opcode):
         machine.credit_wallet_amount(to_address, value)
         machine.debit_wallet_amount(machine.contract_address, value)
         
+        machine.stack.push(int_to_bytes(1))
 
 0x3fb2a74e00000000000000000000000014723a09acff6d2a60dcdf7aa4aff308fddc160c000000000000000000000000000000000000000000000000000000000000007b
 0x3fb2a74e00000000000000000000000058434630580000000000000000000000000000000000000000000000000000000000000000000000000000004563918244f40000

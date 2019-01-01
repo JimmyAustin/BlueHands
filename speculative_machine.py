@@ -44,6 +44,8 @@ class SpeculativeMachine():
         self.path_conditions = []
         self.invocation_symbols = []
 
+        self.return_data = bytes() # This is used for the RETURNDATASIZE and RETURNDATACOPY opcodes
+
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = Int('LastReturnType')
 
@@ -219,7 +221,7 @@ class SpeculativeMachine():
                 return None
             except ReturnException as return_e:
                 self.reset_temp_state()
-                if return_e.func_type == 'revert':
+                if return_e.should_revert:
                     raise return_e
                 else:
                     return return_e

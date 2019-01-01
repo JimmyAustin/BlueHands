@@ -88,6 +88,8 @@ directory = {
     "STATICCALL": (StaticcallOpcode, []),
     "REVERT": (RevertOpcode, []),
     "SELFDESTRUCT": (SelfdestructOpcode, []),
+    "RETURNDATASIZE": (ReturnDataSizeOpcode, []),
+    "RETURNDATACOPY": (ReturnDataCopyOpcode, []),
 }
 
 for i in range(33):

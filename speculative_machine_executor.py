@@ -57,23 +57,26 @@ class SpeculativeMachineExecutor():
 
                 if return_value is not None:
                     requirements.append(machine.last_return_value == return_value)
-   
+                from z3 import simplify
                 result = {
                     'machine': machine,
                     'type': e.func_type,
                     'value': e.value,
                     'path_conditions': machine.path_conditions,
+                    'simple_path_conditions': [simplify(x) for x in machine.path_conditions],
                     'invocations': machine.current_invocation,
                     'requirements': requirements,
-                    'methods': identify_methods(machine)
+                    'methods': identify_methods(machine),
                 }
-                print(result)
+                from pprint import pprint
+                if e.func_type == 'stop':
+                    pprint(result)
                 input_values = calculate_results_for_machine(
                     machine, requirements=requirements)
-
+                pprint({'inp': input_values})
                 if input_values:
                     result['results'] = input_values
-                    print*(input_values)
+                    print(input_values)
                     yield result
                 else:
                     if machine.max_invocations > machine.current_invocation + 1:
@@ -97,6 +100,7 @@ def sated_solver_for_machine(machine, requirements=[]):
     solver = Solver()
     solver.add(*machine.path_conditions, 
                *requirements,
+               *getattr(machine, 'temp_path_conditions', []),
                *[v >= 0 for _, v in machine.wallet_amounts.items() if value_is_constant(v) is False])
     # for condition in machine.path_conditions:
     #     pprint(condition)
@@ -106,16 +110,18 @@ def sated_solver_for_machine(machine, requirements=[]):
         return None
     return solver
 
-def sub_wallet_amounts_for_variables(machine):
+def add_temp_wallet_amounts_for_variables(machine):
     # This seems like a hack. We should consider removing.
+    machine.temp_wallet_amounts = {}
+    machine.temp_path_conditions = []
     for k, v in machine.wallet_amounts.items():
         if value_is_constant(v) is False:
             symbol = BitVec(f"{k.hex()}_Wallet", 256)
-            machine.path_conditions.append(symbol == v)
-            machine.wallet_amounts[k] = symbol
+            machine.temp_path_conditions.append(symbol == v)
+            machine.temp_wallet_amounts[k] = symbol
 
 def calculate_results_for_machine(machine, requirements=[]):
-    #sub_wallet_amounts_for_variables(machine)
+    add_temp_wallet_amounts_for_variables(machine)
     solver = sated_solver_for_machine(machine, requirements)
     if solver is None:
         return None
@@ -155,16 +161,15 @@ def calculate_results_for_machine(machine, requirements=[]):
             'call_data_size': get_field(model, x['call_data_size']),
         }
         for x in grouped_inputs],
-        #'wallets': generate_wallet_values(machine, model)
+        'wallets': generate_wallet_values(machine, model)
     }
 
 def generate_wallet_values(machine, model):
-    def get_value(wallet_value):
+    def get_value(wallet_address, wallet_value):
         if value_is_constant(wallet_value):
             return wallet_value
-        return model[wallet_value]
-
-    return {k: get_value(value) for k, value in machine.wallet_amounts.items()}
+        return model[machine.temp_wallet_amounts[wallet_address]]
+    return {k: get_value(k, value) for k, value in machine.wallet_amounts.items()}
 
 def get_field(model, field):
     try:

@@ -72,3 +72,6 @@ from .selfdestruct import SelfdestructOpcode
 from .push import PushOpcode
 from .dup import DupOpcode
 from .log import LogOpcode
+
+from .return_data_size import ReturnDataSizeOpcode
+from .return_data_copy import ReturnDataCopyOpcode

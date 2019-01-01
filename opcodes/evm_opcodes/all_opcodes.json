@@ -298,6 +298,20 @@
         "text": "EXTCODECOPY"
     },
     {
+        "bin": "3d",
+        "description": "Pushes the size of the return data buffer onto the stack",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "RETURNDATASIZE"
+    },
+    {
+        "bin": "3e",
+        "description": "Copies data from the return data buffer to memory",
+        "len_arg": [],
+        "section": "30s: Environmental Information",
+        "text": "RETURNDATACOPY"
+    },
+    {
         "bin": "40",
         "description": "Get the hash of one of the 256 most recent complete blocks",
         "len_arg": [
