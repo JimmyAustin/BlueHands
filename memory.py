@@ -1,4 +1,5 @@
-from utils import value_is_constant, opt_int2bv
+from utils import value_is_constant, opt_int2bv, get_hex, uint_to_bytes, bytes_to_uint
+from z3 import Concat, BitVecVal
 
 
 MEMORY_CONCRETE = 0
@@ -17,7 +18,7 @@ class Memory:
 
     def set(self, address, value):
         if self.logging:
-            print(f"MEMORY: SET {address} TO {value}")
+            print(f"MEMORY: SET {get_hex(address)} TO {get_hex(value)}")
         address = int.from_bytes(address, 'big')
         if value_is_constant(value):
             self.expand(address+len(value))
@@ -36,9 +37,20 @@ class Memory:
     def get(self, address, length):
         address = int.from_bytes(address, 'big')
         length = int.from_bytes(length, 'big')
+        if length == 0:
+            return bytes()
         if self.data[address][0] == MEMORY_APPROX:
             if self.data[address][2] == 0:  # Beginning of symbolic chunk
-                return self.data[address][1]
+                if length == 32:
+                    return self.data[address][1]
+                if length < 32:
+                    raise NotImplementedError(
+                        'GET MSTORE UNDER FULL SYMBOLIC WORD NOT YET IMPLEMENTED')
+                if length > 32:
+                    next_value = self.get(uint_to_bytes(address+32), uint_to_bytes(length-32))
+                    if value_is_constant(next_value):
+                        next_value = BitVecVal(bytes_to_uint(next_value), 256)
+                    return Concat(self.data[address][1], next_value)
             else:
                 raise NotImplementedError(
                     'GET MSTORE ACROSS SYMBOLIC WORD NOT YET IMPLEMENTED')

@@ -1,10 +1,9 @@
 import sha3
 from stack import Stack
 from memory import Memory
-from storage import Storage
 from exceptions import ExecutionEndedException, ReturnException, EmptyWalletException
-from z3 import Int, BitVec, BitVecVal, Extract, Solver, sat
-from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint
+from z3 import Int, BitVec, BitVecVal, Extract, Solver, sat, BVSubNoOverflow
+from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint, uint_to_bytes
 from stack import Stack
 from opcodes.opcode_builder import OpcodeBuilder
 from copy import deepcopy
@@ -21,13 +20,13 @@ class SpeculativeMachine():
 
 
     def __init__(self, program=bytes(), input_data=bytes(), logging=False, call_value=0,
-                 inputs=[], max_invocations=1, concrete_execution=False,
+                 inputs=[], max_invocations=1, concrete_execution=False, wallet_amounts={},
                  sender_address=pad_bytes_to_address(b'attacker'), contract_address=pad_bytes_to_address(b'contract')):
         self.pc = 0
         self.program = program
         self.stack = Stack()
         self.memory = Memory()
-        self.storage = Storage()
+        self.storage = {}
         self.logging = logging
         self.step_count = 0
         self.concrete_execution = concrete_execution
@@ -35,14 +34,20 @@ class SpeculativeMachine():
         self.sender_address = sender_address
         self.contract_address = contract_address
 
+        self.attacker_wallet_starting = BitVec('AttackerWalletStarting', 256)
         self.attacker_wallet = BitVec('AttackerWallet', 256)
-        self.wallet_amounts = {}
+        self.wallet_amounts = wallet_amounts
+        self.wallet_amounts[self.sender_address] = self.attacker_wallet_starting
+        # if self.sender_address not in self.wallet_amounts:
+        #     self.wallet_amounts[sender_address] = 0
         self.input_data = input_data
         #self.inputs = inputs
         self.max_invocations = max_invocations
         self.current_invocation = -1  # This goes to zero when we invoke new_invocation
         self.path_conditions = []
         self.invocation_symbols = []
+
+        self.hash_map = {} # These are hashes that have been used in the past.
 
         self.return_data = bytes() # This is used for the RETURNDATASIZE and RETURNDATACOPY opcodes
 
@@ -66,7 +71,10 @@ class SpeculativeMachine():
             'return_value': BitVec(f"ReturnValue_{self.current_invocation}", 256),
             'return_type': Int(f"ReturnType_{self.current_invocation}")
         }
+        self.path_conditions.append(new_invocation_symbols['call_value'] >= 0)
         self.credit_wallet_amount(self.contract_address, new_invocation_symbols['call_value'])
+        self.debit_wallet_amount(self.sender_address, new_invocation_symbols['call_value'])
+
         self.invocation_symbols.append(new_invocation_symbols)
 
     # In the speculative machine, if we step and get nothing back we assume that
@@ -166,7 +174,7 @@ class SpeculativeMachine():
             print(f"{i}: 0x{hex_or_string(value)}")
 
         print("---STORAGE---")
-        for k, v in self.storage.storage.items():
+        for k, v in self.storage.items():
             print(f"    {hex_or_string(k)}: {hex_or_string(v)}")
 
         print("---MEMORY---")
@@ -303,6 +311,7 @@ class SpeculativeMachine():
         if address in self.wallet_amounts:
             if value_is_constant(value):
                 value = bytes_to_int(value)
+            self.path_conditions.append(self.wallet_amounts[address] >= value)
             self.wallet_amounts[address] -= value
             if value_is_constant(self.wallet_amounts[address]):
                 if self.wallet_amounts[address] < 0:
@@ -310,7 +319,8 @@ class SpeculativeMachine():
             else:
                 self.path_conditions.append(self.wallet_amounts[address] >= 0)
         else:
-            raise EmptyWalletException(address)
+            self.wallet_amounts[address] = 0
+            self.path_conditions.append(value == 0)
 
 
 class DeterministicContext:

@@ -68,15 +68,10 @@ class SpeculativeMachineExecutor():
                     'requirements': requirements,
                     'methods': identify_methods(machine),
                 }
-                from pprint import pprint
-                if e.func_type == 'stop':
-                    pprint(result)
                 input_values = calculate_results_for_machine(
                     machine, requirements=requirements)
-                pprint({'inp': input_values})
                 if input_values:
                     result['results'] = input_values
-                    print(input_values)
                     yield result
                 else:
                     if machine.max_invocations > machine.current_invocation + 1:
@@ -90,7 +85,10 @@ def get_wallet_amount(machine, address):
     value = machine.wallet_amounts.get(address, bytes(0))
     if value_is_constant(value) is False:
         return value
-    return bytes_to_uint(value)
+    try:
+        return bytes_to_uint(value)
+    except TypeError:
+        return value
 
 def return_type_should_revert(return_type):
     return return_type == 'revert' or return_type == 'invalid'

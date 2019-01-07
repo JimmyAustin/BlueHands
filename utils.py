@@ -43,11 +43,60 @@ def value_is_constant(value):
 def parse_solidity_abi_input(input_value):
     if len(input_value) == 0:
         return None
+    func_sig = input_value[0:4]
 
-    return {
-        'func': input_value[0:4],
+    result = {        'func': func_sig,
         'args': [input_value[x:x+32] for x in range(4, len(input_value), 32)]
     }
+
+    name = name_for_function_sig(func_sig.hex())
+    if name:
+        result['name'] = name
+    return result
+
+
+def parse_solidity_abi_input(input_value):
+    if len(input_value) == 0:
+        return None
+    func_sig = input_value[0:4]
+
+    result = {'func': func_sig}
+
+    func_info = information_for_function_sig(func_sig.hex())
+    result['func_info'] = func_info
+
+    args = [input_value[x:x+32] for x in range(4, len(input_value), 32)]
+    if len(func_info['arg_types']) == 0:
+        func_info['arg_types'] = [None for x in args]
+
+    result['args'] = [parse_arg(arg, arg_type) for arg, arg_type
+                      in zip(args, func_info['arg_types'])]
+
+    return result
+
+def parse_arg(arg, arg_type):
+    if arg_type == 'uint256':
+        arg = bytes_to_uint(arg)
+
+    if arg_type == 'int256':
+        arg = bytes_to_int(arg)
+
+    if arg_type == 'address':
+        arg = arg[12:].hex() # Address are of len 20, but arg is len 32.
+
+    return {
+        'val': arg,
+        'type': arg_type or 'Unknown'
+    }
+
+def summarise_possible_end(possible_end):
+    inputs = [parse_solidity_abi_input(input_val['input_data']) for input_val 
+                   in possible_end['results']['inputs']]
+
+    return {
+        'inputs': inputs
+    }
+
 
 def func_sig(function_name):
     k = sha3.keccak_256()
@@ -65,6 +114,12 @@ def pad_bytes_to_address(value):
 def ready_hex(value):
     return bytes.fromhex(''.join([x for x in value if x in hexdigits]))    
 
+def get_hex(value):
+    try:
+        return value.hex()
+    except Exception:
+        return value
+
 # It seems the base implementation of inv2bv creates 256 seperate variables, 
 # but we can shortcut this process if the value being handed in is a if statement
 
@@ -74,6 +129,58 @@ def opt_int2bv(value):
         
     import pdb; pdb.set_trace()
     return Int2BV(value, 256)
+
+def information_for_function_sig(sig):
+    return {
+        '3fb2a74e': {
+            'name': 'cfoWithdraw(address,uint256)',
+            'arg_types': ['address', 'uint256']
+        },
+        'd0e30db0': {
+            'name': 'deposit()',
+            'arg_types': []
+        },
+        '4e0a3379': {
+            'name': 'setCFO(address)',
+            'arg_types': ['address']
+        },
+        '2e1a7d4d': {
+            'name': 'withdraw(uint256)',
+            'arg_types': ['uint256']
+        },
+        '846719e0': {
+            'name': 'get(int256)',
+            'arg_types': ['int256']
+        },
+        'e5c19b2d': {
+            'name': 'set(int256)',
+            'arg_types': ['int256']
+        },
+        'a5f3c23b': {
+            'name': 'add(int256,int256)',
+            'arg_types': ['int256', 'int256']
+        },
+        '7e62eab8': {
+            'name': 'withdraw(int256)',
+            'arg_types': ['int256']
+        },
+        '6d4ce63c': {
+            'name': 'get()',
+            'arg_types': []
+        },
+        'ad065eb5': {
+            'name': 'canIdentifySender(address)',
+            'arg_types': ['address']
+        },
+        'db89f051': {
+            'name': 'renderAdd(uint256,uint256)',
+            'arg_types': ['int256', 'int256']
+        },
+    }.get(sig, {
+        'name': f"Unknown Method: {sig}",
+        'arg_types': []
+    })
+
 
 bv0 = BitVecVal(0, 256)
 bv1 = BitVecVal(1, 256)

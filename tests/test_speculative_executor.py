@@ -2,7 +2,7 @@ from speculative_machine_executor import SpeculativeMachineExecutor
 from speculative_machine import SpeculativeMachine 
 from z3 import BitVecVal
 from utils import bytes_to_int, int_to_bytes, parse_solidity_abi_input, func_sig, \
-    eth_to_wei, ready_hex, pad_bytes_to_address, uint_to_bytes
+    eth_to_wei, ready_hex, pad_bytes_to_address, uint_to_bytes, summarise_possible_end
 from speculative_machine_executor import calculate_results_for_machine
 
 
@@ -108,7 +108,7 @@ def test_symbolic_return():
     assert len(possible_ends) == 1
     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
     print(solidity_input)
-    assert bytes_to_int(solidity_input['args'][0]) + bytes_to_int(solidity_input['args'][1]) == 5
+    assert sum([x['val'] for x in solidity_input['args']]) == 5
 
 # Fix the first arg to 3, should set the second arg to 2
 def test_symbolic_return_fix_arg():
@@ -128,8 +128,8 @@ def test_symbolic_return_fix_arg():
     assert len(possible_ends) == 1
     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
-    assert bytes_to_int(solidity_input['args'][0]) == 3
-    assert bytes_to_int(solidity_input['args'][1]) == 2
+    assert solidity_input['args'][0]['val'] == 3
+    assert solidity_input['args'][1]['val'] == 2
 
 
 
@@ -166,7 +166,7 @@ def test_multifunction_calls():
     
     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
-    assert bytes_to_int(solidity_input['args'][0]) + bytes_to_int(solidity_input['args'][1]) == 5
+    assert solidity_input['args'][0]['val'] + solidity_input['args'][1]['val'] == 5
     assert possible_ends[0]['methods'] == ['add(int256,int256)', 'get()']
 
 set_add = """
@@ -208,7 +208,7 @@ def test_setting_up_before():
     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
     assert solidity_input['func'].hex() == '846719e0'
-    assert solidity_input['args'][0].hex() == '0000000000000000000000000000000000000000000000000000000000000003'
+    assert solidity_input['args'][0]['val'] == 3
 
 
 passwordWithdraw = """
@@ -280,7 +280,7 @@ def test_address_param_values():
     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
     assert solidity_input['func'].hex() == 'ad065eb5'
-    assert solidity_input['args'][0] == bytes(12) + machine.sender_address
+    assert solidity_input['args'][0]['val'] == machine.sender_address.hex()
 
 
 bankCFOVuln = """
@@ -350,11 +350,39 @@ def test_attack_actually_exists():
     assert bytes_to_int(machine.wallet_amounts[machine.sender_address]) == eth_to_wei(5)
 
 
-def test_wallet_transfers():
+def test_wallet_transfers_easy_mode():
     program = ready_hex(bankCFOVuln)
-    machine = SpeculativeMachine(max_invocations=1, logging=False)
+    machine = SpeculativeMachine(program=program, max_invocations=1, logging=False)
 
-    machine.program = program
+    cfo = pad_bytes_to_address(b'XCF0X')
+    print("CFO:", cfo.hex())
+    machine.execute_deterministic_function(func_sig('setCFO(address)'),
+                                           args=[cfo],
+                                           call_value=int_to_bytes(0),
+                                           sender=cfo)
+    machine.execute_deterministic_function(func_sig('deposit()'),
+                                           args=[],
+                                           call_value=int_to_bytes(eth_to_wei(5)),
+                                           sender=cfo)
+    machine.execute_deterministic_function(func_sig('setCFO(address)'),
+                                           args=[machine.sender_address],
+                                           call_value=int_to_bytes(0),
+                                           sender=machine.sender_address)
+    acceptance_criteria = [
+        machine.attacker_wallet > machine.attacker_wallet_starting
+    ]
+    machine.pc = 0
+    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    assert len(possible_ends) == 1
+    summary = summarise_possible_end(possible_ends[0])
+    assert summary['inputs'][0]['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    assert summary['inputs'][0]['args'][0]['val'] == cfo.hex()
+    assert summary['inputs'][0]['args'][1]['val'] > 0
+
+def test_wallet_transfers_hard_mode():
+    program = ready_hex(bankCFOVuln)
+    machine = SpeculativeMachine(program=program, max_invocations=2, logging=False)
+
     cfo = pad_bytes_to_address(b'XCF0X')
     print("CFO:", cfo.hex())
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
@@ -366,21 +394,14 @@ def test_wallet_transfers():
                                            call_value=int_to_bytes(eth_to_wei(5)),
                                            sender=cfo)
 
-    machine.execute_deterministic_function(func_sig('setCFO(address)'),
-                                           args=[machine.sender_address],
-                                           call_value=int_to_bytes(0),
-                                           sender=machine.sender_address)
-
     acceptance_criteria = [
-        machine.attacker_wallet > 0
+        machine.attacker_wallet > machine.attacker_wallet_starting
     ]
-
-    machine.logging = False
-    print("START")
     machine.pc = 0
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
-    import pdb; pdb.set_trace()
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['inputs'])
 
-    assert bytes_to_int(solidity_input['args'][0]) == 3
-    assert bytes_to_int(solidity_input['args'][1]) == 2
+    summary = summarise_possible_end(possible_ends[0])
+
+    assert summary['inputs'][0]['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    assert summary['inputs'][0]['args'][0]['val'] == cfo.hex()
+    assert summary['inputs'][0]['args'][1]['val'] > 0

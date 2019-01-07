@@ -8,4 +8,4 @@ class SstoreOpcode(Opcode):
     def execute(self, machine):
         key = machine.stack.pop()
         value = machine.stack.pop()
-        machine.storage.set(key, value)
+        machine.storage[key] = value

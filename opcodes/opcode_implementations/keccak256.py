@@ -1,6 +1,7 @@
 from ..opcode import Opcode
 import sha3
-from utils import value_is_constant
+from utils import value_is_constant, bytes_to_uint
+from z3 import IntSort, Const, If, BitVecSort, Or
 
 
 class Keccak256Opcode(Opcode):
@@ -14,9 +15,24 @@ class Keccak256Opcode(Opcode):
         if value_is_constant(memory_value):
             k = sha3.keccak_256()
             k.update(memory_value)
-            machine.stack.push(k.digest())
+            digest = k.digest()
+            machine.hash_map[bytes(memory_value)] = digest
+            print("Throwing hash")
+            print(machine.hash_map)
+            machine.stack.push(digest)
         else:
-            if memory_value.size() == 256:
-                machine.stack.push(memory_value)                
-            else:
-                raise NotImplementedError('Cant hash symbols not of bitvec size 256')
+            result = Const(False, BitVecSort(256))
+
+            for k, v in machine.hash_map.items():
+                #if len(k) == memory_value.size():
+                result = If(memory_value == bytes_to_uint(k), bytes_to_uint(v), result)
+            orSet = Or([memory_value == bytes_to_uint(k) for k in machine.hash_map.keys()])
+            machine.path_conditions.append(orSet)
+            machine.stack.push(result)
+
+            # if memory_value.size() == 256:
+            #     import pdb; pdb.set_trace()
+            #     raise Exception('Invalid stuff')
+            #     machine.stack.push(memory_value)                
+            # else:
+            #     raise NotImplementedError('Cant hash symbols not of bitvec size 256')
