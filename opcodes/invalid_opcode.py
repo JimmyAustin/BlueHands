@@ -11,7 +11,6 @@ class InvalidOpcode():
         pass
 
     def execute(self, machine):
-        import pdb; pdb.set_trace()
         return {
             'type': 'return',
             'func': 'invalid',

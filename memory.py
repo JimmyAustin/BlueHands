@@ -7,7 +7,7 @@ MEMORY_APPROX = 1
 
 
 class Memory:
-    def __init__(self, logging=True):
+    def __init__(self, logging=False):
         self.data = []
         self.logging = logging
 

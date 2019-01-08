@@ -7,10 +7,10 @@ from method_identifier import identify_methods, identify_path_conditions
 
 
 class SpeculativeMachineExecutor():
-    def __init__(self, starting_machine):
-        starting_machine.concrete_execution = False
+    def __init__(self, starting_machine, should_test_for_sat_at_every_jump=False):
         starting_machine.concrete_execution = False
 
+        self.should_test_for_sat_at_every_jump = should_test_for_sat_at_every_jump
         self.starting_machine = starting_machine
         self.branches_evaluated = 0
 
@@ -30,15 +30,22 @@ class SpeculativeMachineExecutor():
                 machine.execute()
             except PathDivergenceException as e:
                 machines = e.possible_machines
-                for i, machine in enumerate(machines):
-                    if sated_solver_for_machine(machine, requirements=additional_requirements):
+                if self.should_test_for_sat_at_every_jump:
+                    for i, machine in enumerate(machines):
+                        if sated_solver_for_machine(machine, requirements=additional_requirements):
+                            print("Adding new invocation")
+                            possible_machines.append(machine)
+                else:
+                    for i, machine in enumerate(machines):
                         print("Adding new invocation")
                         possible_machines.append(machine)
+
+            
             except ReturnException as e:
                 print(identify_methods(machine))
                 print(f"{e.func_type} = {e.value}")
-                # if e.should_revert:
-                #     continue
+                if e.should_revert:
+                    continue
                 # else:
                 #     machine.print_state()
                 return_value = e.value
@@ -57,13 +64,12 @@ class SpeculativeMachineExecutor():
 
                 if return_value is not None:
                     requirements.append(machine.last_return_value == return_value)
-                from z3 import simplify
                 result = {
                     'machine': machine,
                     'type': e.func_type,
                     'value': e.value,
                     'path_conditions': machine.path_conditions,
-                    'simple_path_conditions': [simplify(x) for x in machine.path_conditions],
+                    'simple_path_conditions': [],#[simplify(x) for x in machine.path_conditions],
                     'invocations': machine.current_invocation,
                     'requirements': requirements,
                     'methods': identify_methods(machine),
@@ -96,15 +102,23 @@ def return_type_should_revert(return_type):
 
 def sated_solver_for_machine(machine, requirements=[]):
     solver = Solver()
-    solver.add(*machine.path_conditions, 
+    all_conditions = [*machine.path_conditions, 
                *requirements,
                *getattr(machine, 'temp_path_conditions', []),
-               *[v >= 0 for _, v in machine.wallet_amounts.items() if value_is_constant(v) is False])
+               *[v >= 0 for _, v in machine.wallet_amounts.items() if value_is_constant(v) is False]]
+    solver.add(*all_conditions)
     # for condition in machine.path_conditions:
     #     pprint(condition)
     # for condition in requirements:
     #     pprint(condition)
-    if solver.check() != sat:
+    from datetime import datetime
+    starting_time = datetime.now()
+    print(f"Start Sat Check: {len(all_conditions)}")
+    from pprint import pprint
+    pprint(all_conditions)
+    sat_result = solver.check()
+    print(f"Machine Sat Checked ({sat_result}): Took {(datetime.now()-starting_time).total_seconds()}")
+    if sat_result != sat:
         return None
     return solver
 

@@ -25,7 +25,7 @@ def test_jumpi():
 
     machine = SpeculativeMachine(program=program, input_data=input_data, concrete_execution=True)
     machine.dump_opcodes()
-    machine = SpeculativeMachine(program=program, input_data=input_data, concrete_execution=True, logging=True)
+    machine = SpeculativeMachine(program=program, input_data=input_data, concrete_execution=True, logging=False)
     machine.execute()
     print(f"Step Count: {machine.step_count}")
 
@@ -56,7 +56,7 @@ def test_constant_jump():
     # 4      PUSH1  => 01
     # 5      JUMPI
 
-    machine = SpeculativeMachine(program=program, concrete_execution=True, logging=True)
+    machine = SpeculativeMachine(program=program, concrete_execution=True, logging=False)
     machine.step()
     machine.step()
     machine.step()

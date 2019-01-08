@@ -225,22 +225,21 @@ d8de41d5fb0029"""
 
 def test_can_get_money_out():
     program = ready_hex(passwordWithdraw)
-    machine = SpeculativeMachine(logging=False)
+    machine = SpeculativeMachine()
     machine.deploy(program)
 
     acceptance_criteria = [
-        machine.attacker_wallet > 0#bytes(32)
+        machine.attacker_wallet_starting == 0,
+        machine.attacker_wallet > 0
     ]
 
     # Deposit the money we are going to steal.
-    machine.logging=True
     machine.execute_deterministic_function(bytes(), args=[],
-                                           call_value=int_to_bytes(50000000))
-    machine.logging=True
+                                           call_value=(50000000))
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
  
     assert len(possible_ends) > 0
-    assert bytes_to_int(possible_ends[0]['results']['wallets'][machine.sender_address]) == 50000
+    assert possible_ends[0]['results']['wallets'][machine.sender_address] == 50000
 
 
 address_params = """
@@ -265,7 +264,7 @@ fffffffff1614905091905056fea165627a7a723058200620c506360505
 
 def test_address_param_values():
     program = ready_hex(address_params)
-    machine = SpeculativeMachine(logging=True)
+    machine = SpeculativeMachine(logging=False)
     machine.program = program
 
     acceptance_criteria = [
@@ -321,33 +320,33 @@ bankCFOVuln = """
 
 def test_attack_actually_exists():
     program = ready_hex(bankCFOVuln)
-    machine = SpeculativeMachine(max_invocations=1, logging=True)
-
+    machine = SpeculativeMachine(max_invocations=1, logging=False)
+    machine.wallet_amounts[machine.sender_address] = 0
     machine.program = program
     cfo = pad_bytes_to_address(b'XCF0X')
 
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
                                            args=[cfo],
-                                           call_value=int_to_bytes(0),
+                                           call_value=0,
                                            sender=cfo)
     machine.execute_deterministic_function(func_sig('deposit()'),
                                            args=[],
-                                           call_value=int_to_bytes(eth_to_wei(5)),
+                                           call_value=(eth_to_wei(5)),
                                            sender=cfo)
 
     # Actual attack. Take control of CFO positon, then pillage the wallet.
     print("Launching attack")
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
                                            args=[machine.sender_address],
-                                           call_value=int_to_bytes(0),
+                                           call_value=0,
                                            sender=machine.sender_address)
     print("Took CFO, now withdrawing")
     machine.execute_deterministic_function(func_sig('cfoWithdraw(address,uint256)'),
                                            args=[cfo, int_to_bytes(eth_to_wei(5))],
-                                           call_value=int_to_bytes(0),
+                                           call_value=0,
                                            sender=machine.sender_address)
 
-    assert bytes_to_int(machine.wallet_amounts[machine.sender_address]) == eth_to_wei(5)
+    assert machine.wallet_amounts[machine.sender_address] == eth_to_wei(5)
 
 
 def test_wallet_transfers_easy_mode():
@@ -358,15 +357,15 @@ def test_wallet_transfers_easy_mode():
     print("CFO:", cfo.hex())
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
                                            args=[cfo],
-                                           call_value=int_to_bytes(0),
+                                           call_value=0,
                                            sender=cfo)
     machine.execute_deterministic_function(func_sig('deposit()'),
                                            args=[],
-                                           call_value=int_to_bytes(eth_to_wei(5)),
+                                           call_value=(eth_to_wei(5)),
                                            sender=cfo)
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
                                            args=[machine.sender_address],
-                                           call_value=int_to_bytes(0),
+                                           call_value=0,
                                            sender=machine.sender_address)
     acceptance_criteria = [
         machine.attacker_wallet > machine.attacker_wallet_starting
@@ -387,11 +386,11 @@ def test_wallet_transfers_hard_mode():
     print("CFO:", cfo.hex())
     machine.execute_deterministic_function(func_sig('setCFO(address)'),
                                            args=[cfo],
-                                           call_value=int_to_bytes(0),
+                                           call_value=0,
                                            sender=cfo)
     machine.execute_deterministic_function(func_sig('deposit()'),
                                            args=[],
-                                           call_value=int_to_bytes(eth_to_wei(5)),
+                                           call_value=(eth_to_wei(5)),
                                            sender=cfo)
 
     acceptance_criteria = [
@@ -402,6 +401,9 @@ def test_wallet_transfers_hard_mode():
 
     summary = summarise_possible_end(possible_ends[0])
 
-    assert summary['inputs'][0]['func_info']['name'] == 'cfoWithdraw(address,uint256)'
-    assert summary['inputs'][0]['args'][0]['val'] == cfo.hex()
-    assert summary['inputs'][0]['args'][1]['val'] > 0
+    assert summary['inputs'][0]['func_info']['name'] == 'setCFO(address)'
+    assert summary['inputs'][0]['args'][0]['val'] == machine.sender_address.hex()
+
+    assert summary['inputs'][1]['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    assert summary['inputs'][1]['args'][0]['val'] == cfo.hex()
+    assert summary['inputs'][1]['args'][1]['val'] > 0

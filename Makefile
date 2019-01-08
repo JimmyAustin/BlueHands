@@ -1,5 +1,5 @@
 test:
-	py.test --pdb
+	py.test
 
 testonly:
 	py.test --pdb -k "__only"

@@ -23,7 +23,7 @@ class SloadOpcode(Opcode):
 
         # Non constant that hasn't been found. Duplicate the world for all possible values
         new_machines = []
-        print("--Storage pivot")
+        print(f"--Storage pivot ({len(machine.storage)})")
 
         for k, v in machine.storage.items():
             print(f"{k.hex()} - {v}")

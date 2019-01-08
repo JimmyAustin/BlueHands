@@ -72,6 +72,7 @@ class SpeculativeMachine():
             'return_type': Int(f"ReturnType_{self.current_invocation}")
         }
         self.path_conditions.append(new_invocation_symbols['call_value'] >= 0)
+
         self.credit_wallet_amount(self.contract_address, new_invocation_symbols['call_value'])
         self.debit_wallet_amount(self.sender_address, new_invocation_symbols['call_value'])
 
@@ -214,10 +215,10 @@ class SpeculativeMachine():
         self.pc = 0
 
 
-    def execute_deterministic_function(self, function_sig, args, call_value=bytes(32), **kwargs):
+    def execute_deterministic_function(self, function_sig, args, call_value=0, **kwargs):
         self.reset_temp_state()
         with self.deterministic_context(call_value=call_value, **kwargs):
-            self.credit_wallet_amount(self.contract_address, bytes_to_uint(call_value))
+            self.credit_wallet_amount(self.contract_address, call_value)
             self.pc = 0
             self.input_data = bytearray(function_sig)
             for arg in args:
@@ -309,8 +310,6 @@ class SpeculativeMachine():
 
     def debit_wallet_amount(self, address, value):
         if address in self.wallet_amounts:
-            if value_is_constant(value):
-                value = bytes_to_int(value)
             self.path_conditions.append(self.wallet_amounts[address] >= value)
             self.wallet_amounts[address] -= value
             if value_is_constant(self.wallet_amounts[address]):

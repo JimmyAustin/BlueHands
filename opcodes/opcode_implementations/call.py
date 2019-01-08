@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import int_to_bytes
+from utils import int_to_bytes, bytes_to_uint, value_is_constant
 
 
 class CallOpcode(Opcode):
@@ -18,6 +18,8 @@ class CallOpcode(Opcode):
         
         to_address = to[12:]
 
+        if value_is_constant(value):
+            value = bytes_to_uint(value)
         machine.credit_wallet_amount(to_address, value)
         machine.debit_wallet_amount(machine.contract_address, value)
         

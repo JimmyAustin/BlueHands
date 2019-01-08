@@ -8,9 +8,11 @@ class CallValueOpcode(Opcode):
 
     def execute(self, machine):
         call_value = machine.invocation_symbols[-1]['call_value']
-        # if value_is_constant(call_value):
-        #     import pdb; pdb.set_trace()
-        #     call_value = int_to_bytes(call_value)
+        if value_is_constant(call_value):
+            try:
+                call_value = int_to_bytes(call_value)
+            except TypeError:
+                pass
         machine.stack.push(call_value)
 
 
