@@ -402,7 +402,7 @@ def test_wallet_transfers_hard_mode():
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
 
     summary = summarise_possible_end(possible_ends[0])
-
+    import pdb; pdb.set_trace()
     assert summary['inputs'][0]['func_info']['name'] == 'setCFO(address)'
     assert summary['inputs'][0]['args'][0]['val'] == machine.sender_address.hex()
 

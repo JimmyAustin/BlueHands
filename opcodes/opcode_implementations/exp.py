@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import int_to_bytes, bytes_to_int
+from utils import uint_to_bytes, bytes_to_uint
 
 
 class ExpOpcode(Opcode):
@@ -7,7 +7,7 @@ class ExpOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        val1 = bytes_to_int(machine.stack.pop())
-        val2 = bytes_to_int(machine.stack.pop())
+        val1 = bytes_to_uint(machine.stack.pop())
+        val2 = bytes_to_uint(machine.stack.pop())
 
         machine.stack.push(uint_to_bytes(val1 ** val2))
