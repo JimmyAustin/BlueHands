@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import value_is_constant, bytes_to_int, int_to_bytes
+from utils import value_is_constant, bytes_to_uint, uint_to_bytes
 
 
 class SubOpcode(Opcode):
@@ -14,15 +14,19 @@ class SubOpcode(Opcode):
         val2 = machine.stack.pop()
 
         if value_is_constant(val1):
-            val1 = bytes_to_int(val1)
+            val1 = bytes_to_uint(val1)
             if value_is_constant(val2):
-                val2 = bytes_to_int(val2)
-                machine.stack.push(int_to_bytes(val1 - val2))
+                val2 = bytes_to_uint(val2)
+                result = val1 - val2
+                if result < 0:
+                    result += 2 ** 256
+                machine.stack.push(uint_to_bytes(result))
             else:
                 machine.stack.push(val1 - val2)
         else:
             if value_is_constant(val2):
-                val2 = bytes_to_int(val2)
+                val2 = bytes_to_uint(val2)
                 machine.stack.push(val1 - val2)
             else:
                 machine.stack.push(val1 - val2)
+        print(f"ADDING: {val1} + {val2} == {machine.stack.stack[-1]}")

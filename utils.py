@@ -1,6 +1,6 @@
 import sha3
 from string import hexdigits
-from z3 import Int2BV, BitVecVal
+from z3 import Int2BV, BitVecVal, BitVec
 
 
 def uint_to_bytes(val):
@@ -74,23 +74,31 @@ def parse_solidity_abi_input(input_value):
 
     return result
 
-def parse_arg(arg, arg_type):
+def parse_input(input_value):
+    return {
+        'data': parse_solidity_abi_input(input_value['input_data']),
+        'timestamp': input_value['timestamp']
+    }
+
+def parse_arg(raw_arg, arg_type):
+    arg = raw_arg
     if arg_type == 'uint256':
-        arg = bytes_to_uint(arg)
+        arg = bytes_to_uint(raw_arg)
 
     if arg_type == 'int256':
-        arg = bytes_to_int(arg)
+        arg = bytes_to_int(raw_arg)
 
     if arg_type == 'address':
-        arg = arg[12:].hex() # Address are of len 20, but arg is len 32.
+        arg = raw_arg[12:].hex() # Address are of len 20, but arg is len 32.
 
     return {
+        'raw': raw_arg,
         'val': arg,
         'type': arg_type or 'Unknown'
     }
 
 def summarise_possible_end(possible_end):
-    inputs = [parse_solidity_abi_input(input_val['input_data']) for input_val 
+    inputs = [parse_input(input_val) for input_val 
                    in possible_end['results']['inputs']]
 
     return {
@@ -99,6 +107,8 @@ def summarise_possible_end(possible_end):
 
 
 def func_sig(function_name):
+    if function_name == 'constructor':
+        return bytes()
     k = sha3.keccak_256()
     k.update(function_name.encode('utf8'))
     return bytes.fromhex(k.hexdigest()[0:8])
@@ -131,52 +141,7 @@ def opt_int2bv(value):
     return Int2BV(value, 256)
 
 def information_for_function_sig(sig):
-    return {
-        '3fb2a74e': {
-            'name': 'cfoWithdraw(address,uint256)',
-            'arg_types': ['address', 'uint256']
-        },
-        'd0e30db0': {
-            'name': 'deposit()',
-            'arg_types': []
-        },
-        '4e0a3379': {
-            'name': 'setCFO(address)',
-            'arg_types': ['address']
-        },
-        '2e1a7d4d': {
-            'name': 'withdraw(uint256)',
-            'arg_types': ['uint256']
-        },
-        '846719e0': {
-            'name': 'get(int256)',
-            'arg_types': ['int256']
-        },
-        'e5c19b2d': {
-            'name': 'set(int256)',
-            'arg_types': ['int256']
-        },
-        'a5f3c23b': {
-            'name': 'add(int256,int256)',
-            'arg_types': ['int256', 'int256']
-        },
-        '7e62eab8': {
-            'name': 'withdraw(int256)',
-            'arg_types': ['int256']
-        },
-        '6d4ce63c': {
-            'name': 'get()',
-            'arg_types': []
-        },
-        'ad065eb5': {
-            'name': 'canIdentifySender(address)',
-            'arg_types': ['address']
-        },
-        'db89f051': {
-            'name': 'renderAdd(uint256,uint256)',
-            'arg_types': ['int256', 'int256']
-        },
-    }.get(sig, {
+    return method_table.get(sig, {
         'name': f"Unknown Method: {sig}",
         'arg_types': []
     })
@@ -184,3 +149,45 @@ def information_for_function_sig(sig):
 
 bv0 = BitVecVal(0, 256)
 bv1 = BitVecVal(1, 256)
+
+def load_binary(path):
+    with open(path) as file_obj:
+        return bytes.fromhex(file_obj.read())
+
+def build_method_table():
+    methods = {
+        '27e235e3': 'balances(address)',
+        '3fb2a74e': 'cfoWithdraw(address,uint256)',
+        'd0e30db0': 'deposit()',
+        '4e0a3379': 'setCFO(address)',
+        '3ccfd60b': 'withdraw()',
+        '2e1a7d4d': 'withdraw(uint256)',
+        '7e62eab8': 'withdraw(int256)',
+        '6d4ce63c': 'get()',
+        '846719e0': 'get(int256)',
+        'e5c19b2d': 'set(int256)',
+        'a5f3c23b': 'add(int256,int256)',
+        'ad065eb5': 'canIdentifySender(address)',
+        'db89f051': 'renderAdd(uint256,uint256)',
+        '79af55e4': 'increaseLockTime(uint256)',
+        'a4beda63': 'lockTime(address)'
+    }
+
+    def get_arguments(sig):
+        index = sig.find('(')
+        args = sig[index+1:-1]
+        return args.split(',')
+
+    return {k: {
+        'name': v,
+        'arg_types': get_arguments(v)
+    } for k,v in methods.items()}
+
+method_table = build_method_table()
+
+def is_bitvec(val):
+    if val.__class__ == BitVec:
+        return True
+    if val.__class__ == BitVecVal:
+        return True
+    return False

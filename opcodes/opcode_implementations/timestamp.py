@@ -6,4 +6,4 @@ class TimestampOpcode(Opcode):
         super().__init__(instruction)
 
     def execute(self, machine):
-        raise NotImplementedError
+        machine.stack.push(machine.invocation_symbols[-1]['timestamp'])

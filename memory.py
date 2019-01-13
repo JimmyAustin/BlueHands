@@ -39,6 +39,8 @@ class Memory:
         length = int.from_bytes(length, 'big')
         if length == 0:
             return bytes()
+        if value_is_constant(address) and value_is_constant(length):
+            self.expand(address+length)
         if self.data[address][0] == MEMORY_APPROX:
             if self.data[address][2] == 0:  # Beginning of symbolic chunk
                 if length == 32:

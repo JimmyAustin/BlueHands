@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import int_to_bytes, value_is_constant
+from utils import uint_to_bytes, value_is_constant
 
 
 class CallValueOpcode(Opcode):
@@ -10,7 +10,7 @@ class CallValueOpcode(Opcode):
         call_value = machine.invocation_symbols[-1]['call_value']
         if value_is_constant(call_value):
             try:
-                call_value = int_to_bytes(call_value)
+                call_value = uint_to_bytes(call_value)
             except TypeError:
                 pass
         machine.stack.push(call_value)

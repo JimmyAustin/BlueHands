@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import value_is_constant, bytes_to_int
+from utils import value_is_constant, bytes_to_uint
 from itertools import chain
 from exceptions import PathDivergenceException
 
@@ -29,7 +29,7 @@ class SloadOpcode(Opcode):
             print(f"{k.hex()} - {v}")
             new_machine = machine.clone()
             new_machine.storage[k] = v
-            new_machine.path_conditions.append(bytes_to_int(k) == key)
+            new_machine.path_conditions.append(bytes_to_uint(k) == key)
             new_machine.stack.push(v)
             new_machines.append(new_machine)
 

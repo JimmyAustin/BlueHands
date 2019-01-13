@@ -1,5 +1,5 @@
 from ..opcode import Opcode
-from utils import int_to_bytes, bytes_to_int, value_is_constant
+from utils import uint_to_bytes, bytes_to_uint, value_is_constant
 
 
 class AddOpcode(Opcode):
@@ -11,15 +11,18 @@ class AddOpcode(Opcode):
         val2 = machine.stack.pop()
 
         if value_is_constant(val1):
-            val1 = bytes_to_int(val1)
+            val1 = bytes_to_uint(val1)
             if value_is_constant(val2):
-                val2 = bytes_to_int(val2)
-                machine.stack.push(int_to_bytes(val1 + val2))
+                val2 = bytes_to_uint(val2)
+                new_val = val1 + val2
+                if new_val >= 2 ** 256:
+                    new_val -= 2 ** 256
+                machine.stack.push(uint_to_bytes(new_val))
             else:
                 machine.stack.push(val1 + val2)
         else:
             if value_is_constant(val2):
-                val2 = bytes_to_int(val2)
+                val2 = bytes_to_uint(val2)
                 machine.stack.push(val1 + val2)
             else:
                 machine.stack.push(val1 + val2)

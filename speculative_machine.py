@@ -51,8 +51,12 @@ class SpeculativeMachine():
 
         self.return_data = bytes() # This is used for the RETURNDATASIZE and RETURNDATACOPY opcodes
 
+        self.first_timestamp = BitVec('FirstTimestamp', 256)
+        self.last_timestamp = BitVec('LastTimestamp', 256)
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = Int('LastReturnType')
+
+        self.overflow_checks = []
 
         self.new_invocation()
 
@@ -65,12 +69,17 @@ class SpeculativeMachine():
             'input_words': [],
             'input_words_by_index': {},
             'current_gas': BitVec(f"Gas_{self.current_invocation}", 256),
+            'timestamp': BitVec(f"Timestamp_{self.current_invocation}", 256),
 
             'call_data_size': Int(f"CallDataSize_{self.current_invocation}"),
             'call_value': BitVec(f"CallValue_{self.current_invocation}", 256),
             'return_value': BitVec(f"ReturnValue_{self.current_invocation}", 256),
             'return_type': Int(f"ReturnType_{self.current_invocation}")
         }
+        if len(self.invocation_symbols) > 0:
+            prev_symbols = self.invocation_symbols[-1]
+            timestamp_over_prev = new_invocation_symbols['timestamp'] > prev_symbols['timestamp']
+            self.path_conditions.append(timestamp_over_prev)
         self.path_conditions.append(new_invocation_symbols['call_value'] >= 0)
 
         self.credit_wallet_amount(self.contract_address, new_invocation_symbols['call_value'])
@@ -201,9 +210,6 @@ class SpeculativeMachine():
         elif result['type'] == 'stop':
             raise ReturnException(None, result['func'])
 
-        import pdb
-        pdb.set_trace()
-
     def execute_function_named(self, function_name, args):
         k = sha3.keccak_256()
         k.update(function_name.encode('utf8'))
@@ -215,9 +221,10 @@ class SpeculativeMachine():
         self.pc = 0
 
 
-    def execute_deterministic_function(self, function_sig, args, call_value=0, **kwargs):
+    def execute_deterministic_function(self, function_sig, args=[], call_value=0, timestamp=None, 
+                                       **kwargs):
         self.reset_temp_state()
-        with self.deterministic_context(call_value=call_value, **kwargs):
+        with self.deterministic_context(call_value=call_value, timestamp=timestamp, **kwargs):
             self.credit_wallet_amount(self.contract_address, call_value)
             self.pc = 0
             self.input_data = bytearray(function_sig)
@@ -235,9 +242,12 @@ class SpeculativeMachine():
                 else:
                     return return_e
 
-    def deploy(self, program):
-        with self.deterministic_context():
-            self.program = program
+    def deploy(self, program, args=[], **kwargs):
+        with self.deterministic_context(**kwargs):
+            self.program = bytearray(program)
+            for arg in args:
+                self.program.extend(arg.rjust(32, b"\x00"))
+            self.program = bytes(self.program)
             self.pc = 0
             try:
                 self.execute()
@@ -323,10 +333,11 @@ class SpeculativeMachine():
 
 
 class DeterministicContext:
-    def __init__(self, machine, sender=None, call_value=bytes(32)):
+    def __init__(self, machine, sender=None, call_value=bytes(32), timestamp=None):
         self.machine = machine
         self.call_value = call_value
         self.sender = sender
+        self.timestamp = timestamp
     def __enter__(self):
         current_invocation = self.machine.invocation_symbols[-1]
                 
@@ -342,6 +353,10 @@ class DeterministicContext:
             self.previous_call_value = current_invocation['call_value']
             current_invocation['call_value'] = self.call_value
 
+        if self.timestamp is not None:
+            self.previous_timestamp = current_invocation['timestamp']
+            current_invocation['timestamp'] = self.timestamp
+
     def __exit__(self, *args, **kwargs):
         current_invocation = self.machine.invocation_symbols[-1]
 
@@ -353,6 +368,8 @@ class DeterministicContext:
         if self.call_value is not None:        
             current_invocation['call_value'] = self.previous_call_value
 
+        if self.timestamp is not None:
+            current_invocation['timestamp'] = self.previous_timestamp
 
 def hex_or_string(value):
     try:

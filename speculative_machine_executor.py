@@ -1,5 +1,5 @@
 from exceptions import PathDivergenceException, ReturnException
-from z3 import Solver, sat, BitVecVal, Z3Exception, BitVec
+from z3 import Solver, sat, BitVecVal, Z3Exception, BitVec, simplify
 from speculative_machine import SpeculativeMachine
 from utils import value_is_constant, pad_bytes_to_address, bytes_to_uint
 from pprint import pprint
@@ -59,7 +59,9 @@ class SpeculativeMachineExecutor():
                 requirements = [*additional_requirements,
                                 *acceptance_criteria,
                                 machine.last_return_type == return_type_enum,
-                                machine.attacker_wallet == get_wallet_amount(machine, machine.sender_address)
+                                machine.attacker_wallet == get_wallet_amount(machine, machine.sender_address),
+                                machine.first_timestamp == machine.invocation_symbols[0]['timestamp'],
+                                machine.last_timestamp == machine.invocation_symbols[-1]['timestamp'],
                                 ]
 
                 if return_value is not None:
@@ -69,7 +71,7 @@ class SpeculativeMachineExecutor():
                     'type': e.func_type,
                     'value': e.value,
                     'path_conditions': machine.path_conditions,
-                    'simple_path_conditions': [],#[simplify(x) for x in machine.path_conditions],
+                    'simple_path_conditions': [simplify(x) for x in machine.path_conditions],
                     'invocations': machine.current_invocation,
                     'requirements': requirements,
                     'methods': identify_methods(machine),
@@ -141,7 +143,8 @@ def calculate_results_for_machine(machine, requirements=[]):
 
     grouped_inputs = [{
         'input_symbols': [],
-        'call_data_size': None
+        'call_data_size': None,
+        'timestamp': None
     } for i in range(0, machine.current_invocation+1)]
 
     for model_input in model:
@@ -152,6 +155,9 @@ def calculate_results_for_machine(machine, requirements=[]):
         elif name.startswith('CallDataSize'):
             invocation = get_symbol_invocation_from_name(name)
             grouped_inputs[invocation]['call_data_size'] = model_input
+        elif name.startswith('Timestamp'):
+            invocation = get_symbol_invocation_from_name(name)
+            grouped_inputs[invocation]['timestamp'] = model_input
     # if len(grouped_inputs) > 1:
     #     import pdb; pdb.set_trace()
     for grouped_input in grouped_inputs:
@@ -171,6 +177,7 @@ def calculate_results_for_machine(machine, requirements=[]):
         'inputs': [{
             'input_data': x['result'],
             'call_data_size': get_field(model, x['call_data_size']),
+            'timestamp': get_field(model, x['timestamp']),
         }
         for x in grouped_inputs],
         'wallets': generate_wallet_values(machine, model)

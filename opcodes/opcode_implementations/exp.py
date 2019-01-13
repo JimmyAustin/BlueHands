@@ -10,4 +10,4 @@ class ExpOpcode(Opcode):
         val1 = bytes_to_int(machine.stack.pop())
         val2 = bytes_to_int(machine.stack.pop())
 
-        machine.stack.push(int_to_bytes(val1 ** val2))
+        machine.stack.push(uint_to_bytes(val1 ** val2))

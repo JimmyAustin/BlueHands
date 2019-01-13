@@ -23,6 +23,8 @@ build_contracts:
 	$(call compile_file,./contracts/src/set_add.sol)
 	$(call compile_file,./contracts/src/address_return.sol)
 	$(call compile_file,./contracts/src/password_withdraw.sol)
+	$(call compile_file,./contracts/src/timelock.sol)
+	$(call compile_file,./contracts/src/underflow_token.sol)
 
 lint:
 	flake8
