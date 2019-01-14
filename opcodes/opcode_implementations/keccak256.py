@@ -27,7 +27,7 @@ class Keccak256Opcode(Opcode):
                 #if len(k) == memory_value.size():
                 result = If(memory_value == bytes_to_uint(k), bytes_to_uint(v), result)
             orSet = Or([memory_value == bytes_to_uint(k) for k in machine.hash_map.keys()])
-            machine.path_conditions.append(orSet)
+            machine.add_path_condition(orSet)
             machine.stack.push(result)
 
             # if memory_value.size() == 256:

@@ -29,7 +29,7 @@ class SloadOpcode(Opcode):
             print(f"{k.hex()} - {v}")
             new_machine = machine.clone()
             new_machine.storage[k] = v
-            new_machine.path_conditions.append(bytes_to_uint(k) == key)
+            new_machine.add_path_condition(bytes_to_uint(k) == key)
             new_machine.stack.push(v)
             new_machines.append(new_machine)
 

@@ -57,8 +57,14 @@ class SpeculativeMachine():
         self.last_return_type = Int('LastReturnType')
 
         self.overflow_checks = []
-
+        self.create_new_path_condition_section()
         self.new_invocation()
+
+    def create_new_path_condition_section(self):
+        self.path_conditions.append([])
+
+    def add_path_condition(self, new_condition):
+        return self.path_conditions[-1].append(new_condition)
 
     def new_invocation(self):
         print("New invocation")
@@ -79,8 +85,8 @@ class SpeculativeMachine():
         if len(self.invocation_symbols) > 0:
             prev_symbols = self.invocation_symbols[-1]
             timestamp_over_prev = new_invocation_symbols['timestamp'] > prev_symbols['timestamp']
-            self.path_conditions.append(timestamp_over_prev)
-        self.path_conditions.append(new_invocation_symbols['call_value'] >= 0)
+            self.add_path_condition(timestamp_over_prev)
+        self.add_path_condition(new_invocation_symbols['call_value'] >= 0)
 
         self.credit_wallet_amount(self.contract_address, new_invocation_symbols['call_value'])
         self.debit_wallet_amount(self.sender_address, new_invocation_symbols['call_value'])
@@ -144,10 +150,10 @@ class SpeculativeMachine():
         print(f"Prev: {previous_bitvec}")
         print(f"Next: {next_bitvec}")
 
-        self.path_conditions.append(Extract(end-overlap, 0, previous_bitvec) ==
+        self.add_path_condition(Extract(end-overlap, 0, previous_bitvec) ==
                                     Extract(end, overlap, new_input))
 
-        self.path_conditions.append(Extract(overlap-1, 0, new_input) ==
+        self.add_path_condition(Extract(overlap-1, 0, new_input) ==
                                     Extract(end, end - overlap+1, next_bitvec))
 
         return new_input
@@ -156,7 +162,7 @@ class SpeculativeMachine():
         input_at_address = self.get_input_at_address(fixed_starting_point)
         value_length = len(fixed_value) * 8
         value_bitvecval = BitVecVal(bytes_to_int(fixed_value), value_length)
-        self.path_conditions.append(value_bitvecval == input_at_address)
+        self.add_path_condition(value_bitvecval == input_at_address)
 
     def solvable(self):
         solver = Solver()
@@ -320,16 +326,16 @@ class SpeculativeMachine():
 
     def debit_wallet_amount(self, address, value):
         if address in self.wallet_amounts:
-            self.path_conditions.append(self.wallet_amounts[address] >= value)
+            self.add_path_condition(self.wallet_amounts[address] >= value)
             self.wallet_amounts[address] -= value
             if value_is_constant(self.wallet_amounts[address]):
                 if self.wallet_amounts[address] < 0:
                     raise EmptyWalletException(address)
             else:
-                self.path_conditions.append(self.wallet_amounts[address] >= 0)
+                self.add_path_condition(self.wallet_amounts[address] >= 0)
         else:
             self.wallet_amounts[address] = 0
-            self.path_conditions.append(value == 0)
+            self.add_path_condition(value == 0)
 
 
 class DeterministicContext:

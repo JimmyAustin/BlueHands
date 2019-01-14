@@ -30,8 +30,8 @@ class JumpiOpcode(Opcode):
             will_branch_machine = machine
             wont_branch_machine = machine.clone()
             will_branch_machine.pc = address
-            will_branch_machine.path_conditions.append(condition != 0)
-            wont_branch_machine.path_conditions.append(condition == 0)
+            will_branch_machine.add_path_condition(condition != 0)
+            wont_branch_machine.add_path_condition(condition == 0)
 
             raise PathDivergenceException(
                 [will_branch_machine, wont_branch_machine])
