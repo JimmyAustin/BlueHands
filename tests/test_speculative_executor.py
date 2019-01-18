@@ -376,9 +376,9 @@ def test_wallet_transfers_easy_mode():
     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
     assert len(possible_ends) == 1
     summary = summarise_possible_end(possible_ends[0])
-    assert summary['inputs'][0]['func_info']['name'] == 'cfoWithdraw(address,uint256)'
-    assert summary['inputs'][0]['args'][0]['val'] == cfo.hex()
-    assert summary['inputs'][0]['args'][1]['val'] > 0
+    assert summary['inputs'][0]['data']['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    assert summary['inputs'][0]['data']['args'][0]['val'] == cfo.hex()
+    assert summary['inputs'][0]['data']['args'][1]['val'] > 0
 
 def test_wallet_transfers_hard_mode():
     program = ready_hex(bankCFOVuln)
@@ -403,9 +403,9 @@ def test_wallet_transfers_hard_mode():
 
     summary = summarise_possible_end(possible_ends[0])
 
-    assert summary['inputs'][0]['func_info']['name'] == 'setCFO(address)'
-    assert summary['inputs'][0]['args'][0]['val'] == machine.sender_address.hex()
+    assert summary['inputs'][0]['data']['func_info']['name'] == 'setCFO(address)'
+    assert summary['inputs'][0]['data']['args'][0]['val'] == machine.sender_address.hex()
 
-    assert summary['inputs'][1]['func_info']['name'] == 'cfoWithdraw(address,uint256)'
-    assert summary['inputs'][1]['args'][0]['val'] == cfo.hex()
-    assert summary['inputs'][1]['args'][1]['val'] > 0
+    assert summary['inputs'][1]['data']['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    assert summary['inputs'][1]['data']['args'][0]['val'] == cfo.hex()
+    assert summary['inputs'][1]['data']['args'][1]['val'] > 0
