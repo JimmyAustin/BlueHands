@@ -110,7 +110,7 @@ def test_symbolic_return():
     assert len(possible_ends) == 1
     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
     print(solidity_input)
-    assert sum([x['val'] for x in solidity_input['args']]) == 5
+    assert (sum([x['val'] for x in solidity_input['args']]) % 2 ** 256) == 5
 
 # Fix the first arg to 3, should set the second arg to 2
 def test_symbolic_return_fix_arg():

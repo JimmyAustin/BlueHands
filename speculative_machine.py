@@ -2,7 +2,7 @@ import sha3
 from stack import Stack
 from memory import Memory
 from exceptions import ExecutionEndedException, ReturnException, EmptyWalletException
-from z3 import Int, BitVec, BitVecVal, Extract, Solver, sat, BVSubNoOverflow
+from z3 import BitVec, BitVecVal, Extract, Solver, sat, BVSubNoOverflow
 from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint, uint_to_bytes
 from stack import Stack
 from opcodes.opcode_builder import OpcodeBuilder
@@ -54,7 +54,7 @@ class SpeculativeMachine():
         self.first_timestamp = BitVec('FirstTimestamp', 256)
         self.last_timestamp = BitVec('LastTimestamp', 256)
         self.last_return_value = BitVec('LastReturnValue', 256)
-        self.last_return_type = Int('LastReturnType')
+        self.last_return_type = BitVec('LastReturnType', 256)
 
         self.overflow_checks = []
 
@@ -71,10 +71,10 @@ class SpeculativeMachine():
             'current_gas': BitVec(f"Gas_{self.current_invocation}", 256),
             'timestamp': BitVec(f"Timestamp_{self.current_invocation}", 256),
 
-            'call_data_size': Int(f"CallDataSize_{self.current_invocation}"),
+            'call_data_size': BitVec(f"CallDataSize_{self.current_invocation}", 256),
             'call_value': BitVec(f"CallValue_{self.current_invocation}", 256),
             'return_value': BitVec(f"ReturnValue_{self.current_invocation}", 256),
-            'return_type': Int(f"ReturnType_{self.current_invocation}")
+            'return_type': BitVec(f"ReturnType_{self.current_invocation}", 256)
         }
         if len(self.invocation_symbols) > 0:
             prev_symbols = self.invocation_symbols[-1]

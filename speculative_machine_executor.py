@@ -1,5 +1,5 @@
 from exceptions import PathDivergenceException, ReturnException
-from z3 import Solver, sat, BitVecVal, Z3Exception, BitVec, simplify
+from z3 import Solver, SolverFor, sat, BitVecVal, Z3Exception, BitVec, simplify
 from speculative_machine import SpeculativeMachine
 from utils import value_is_constant, pad_bytes_to_address, bytes_to_uint
 from pprint import pprint
@@ -46,8 +46,6 @@ class SpeculativeMachineExecutor():
                 print(f"{e.func_type} = {e.value}")
                 if e.should_revert:
                     continue
-                # else:
-                #     machine.print_state()
                 return_value = e.value
 
                 if return_value is not None and value_is_constant(return_value) is True:
@@ -103,7 +101,8 @@ def return_type_should_revert(return_type):
 
 
 def sated_solver_for_machine(machine, requirements=[]):
-    solver = Solver()
+    # solver = Solver()
+    solver = SolverFor('QF_UFBV')
     all_conditions = [*machine.path_conditions, 
                *requirements,
                *getattr(machine, 'temp_path_conditions', []),
@@ -143,7 +142,8 @@ def calculate_results_for_machine(machine, requirements=[]):
 
     grouped_inputs = [{
         'input_symbols': [],
-        'call_data_size': None,
+        'model_call_data_size': None,
+        'call_data_size': machine.invocation_symbols[i]['call_data_size'],
         'timestamp': None
     } for i in range(0, machine.current_invocation+1)]
 
@@ -154,7 +154,7 @@ def calculate_results_for_machine(machine, requirements=[]):
             grouped_inputs[invocation]['input_symbols'].append(model_input)
         elif name.startswith('CallDataSize'):
             invocation = get_symbol_invocation_from_name(name)
-            grouped_inputs[invocation]['call_data_size'] = model_input
+            grouped_inputs[invocation]['model_call_data_size'] = model_input
         elif name.startswith('Timestamp'):
             invocation = get_symbol_invocation_from_name(name)
             grouped_inputs[invocation]['timestamp'] = model_input
@@ -169,14 +169,20 @@ def calculate_results_for_machine(machine, requirements=[]):
 
         call_data_size = grouped_input['call_data_size']
 
-        if call_data_size is not None:
-            call_data_length = int(model[call_data_size].as_long())
-            total_value = total_value[:call_data_length]
+        if grouped_input['model_call_data_size'] is None:
+            exists_in_model = False
+        else:
+            exists_in_model = True
+
+        if call_data_size is not None and exists_in_model:
+            call_data_size = identify_minimum_value(solver, call_data_size)
+            grouped_input['call_data_size'] = call_data_size
+            total_value = total_value[:call_data_size]
         grouped_input['result'] = total_value
     return {
         'inputs': [{
             'input_data': x['result'],
-            'call_data_size': get_field(model, x['call_data_size']),
+            'call_data_size': x['call_data_size'],
             'timestamp': get_field(model, x['timestamp']),
         }
         for x in grouped_inputs],
@@ -189,6 +195,25 @@ def generate_wallet_values(machine, model):
             return wallet_value
         return model[machine.temp_wallet_amounts[wallet_address]]
     return {k: get_value(k, value) for k, value in machine.wallet_amounts.items()}
+
+def identify_minimum_value(solver, field, index=None, minV=0, maxV=9000000):
+    if index is None:
+        index = minV + ((maxV-minV) // 2)
+    
+    while True:
+        solver.push()
+        solver.add(field < index)
+        if solver.check() == sat:
+            maxV = index
+        else:
+            minV = index
+        index = minV + ((maxV-minV) // 2)
+        if minV + 1 == maxV:
+            return minV
+        
+        solver.pop()
+
+    return None
 
 def get_field(model, field):
     try:

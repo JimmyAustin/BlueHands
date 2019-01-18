@@ -16,3 +16,12 @@ class IszeroOpcode(Opcode):
             value_to_push = If(value == 0, bv1, bv0)
 
         machine.stack.push(value_to_push)
+
+# def check_if_value_iszero(value):
+#     try:
+#         if value.decl().name() == 'if':
+#             children = value.children()
+#             if children[1] == 1
+#     except Exception as e:
+#         import pdb; pdb.set_trace()
+#         return False
