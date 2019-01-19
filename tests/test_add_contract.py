@@ -1,20 +1,16 @@
 from speculative_machine import SpeculativeMachine
-from utils import bytes_to_int
+from utils import bytes_to_int, load_binary
+from universe import Universe 
 
 
 def test_add_contract():
     binary_location = './contracts/build/add.bin'
-
-    def load_binary(path):
-        with open(path) as file_obj:
-            return bytes.fromhex(file_obj.read())
-
     binary = load_binary(binary_location)
 
-    machine = SpeculativeMachine(binary, concrete_execution=True, logging=False)
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
 
-    machine.deploy(binary)
-    result = machine.execute_function_named('renderAdd()', [])
+    result = contract.execute_function('renderAdd()', [])
 
-    result = bytes_to_int(result.value)
+    result = bytes_to_int(result['value'])
     assert result == 14690

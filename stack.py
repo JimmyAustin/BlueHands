@@ -6,6 +6,8 @@ class Stack():
         self.stack = []
 
     def push(self, value):
+        if value is None:
+            import pdb; pdb.set_trace()
         if value_is_constant(value) is True:
             value = value.rjust(32, b"\x00")
         self.stack.append(value)

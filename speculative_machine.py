@@ -3,7 +3,8 @@ from stack import Stack
 from memory import Memory
 from exceptions import ExecutionEndedException, ReturnException, EmptyWalletException
 from z3 import BitVec, BitVecVal, Extract, Solver, sat, BVSubNoOverflow, Z3Exception
-from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint, uint_to_bytes
+from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint, \
+    uint_to_bytes, translate_ctx
 from stack import Stack
 from opcodes.opcode_builder import OpcodeBuilder
 from copy import deepcopy
@@ -407,12 +408,3 @@ def hex_or_string(value):
     except Exception:
         return str(value)
 
-def translate_ctx(value, context):
-    if getattr(value, 'translate', None) is not None:
-        try:
-            value_ctx = getattr(value, 'ctx', None)
-            if value_ctx is not None and value_ctx != context:
-                value = value.translate(context)
-        except Z3Exception:
-            pass
-    return value

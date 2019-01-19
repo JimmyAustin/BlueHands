@@ -2,9 +2,11 @@ from speculative_machine_executor import SpeculativeMachineExecutor
 from speculative_machine import SpeculativeMachine 
 from z3 import BitVecVal
 from utils import bytes_to_int, int_to_bytes, parse_solidity_abi_input, func_sig, \
-    eth_to_wei, ready_hex, pad_bytes_to_address, uint_to_bytes, summarise_possible_end
+    eth_to_wei, ready_hex, pad_bytes_to_address, uint_to_bytes, summarise_possible_end, \
+    load_binary
+from universe import Universe 
 from speculative_machine_executor import calculate_results_for_machine
-
+from speculative_universe_executor import SpeculativeUniverseExecutor
 
 # contract branchTest {
 #   function renderAdd (int value) public pure returns (int) {
@@ -16,24 +18,18 @@ from speculative_machine_executor import calculate_results_for_machine
 #   }
 # }
 
-branchTest = """
-6080604052600436106039576000357c01000000000000000000000000000000000000
-0000000000000000000090048063a6c14f8d14603e575b600080fd5b34801560495760
-0080fd5b50607360048036036020811015605e57600080fd5b81019080803590602001
-909291905050506089565b6040518082815260200191505060405180910390f35b6000
-6005821415609b576001905060a0565b600090505b91905056fea165627a7a72305820
-bfe3c81d3efc9ae914e9b066b06eb69525eb959f79f153fb851f4ef0c293d4280029
-"""
 
 branchTestInputRet1 = 'a6c14f8d0000000000000000000000000000000000000000000000000000000000000005'
 branchTestInputRet0 = 'a6c14f8d0000000000000000000000000000000000000000000000000000000000000000'
 
 def test_identify_return_paths():
-
-    program = ready_hex(branchTest)
+    binary = load_binary('./contracts/build/branchTest.bin')
     machine = SpeculativeMachine()
-    machine.program = program
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends()
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
+
+    solutions = SpeculativeUniverseExecutor(universe).get_solutions([contract.address], [])
 
     # This contract has two return solutions
     # - Return, 1
@@ -44,7 +40,7 @@ def test_identify_return_paths():
     found_1_solution = False
     found_0_solution = False
 
-    for possible_end in possible_ends:
+    for possible_end in solutions:
         if possible_end['type'] == 'return':
             return_count += 1
             input_value = possible_end['results']['inputs'][0]['input_data']
@@ -67,18 +63,25 @@ def test_input():
 
 
 def test_have_acceptance_criteria():
-    program = ready_hex(branchTest)
+
+    binary = load_binary('./contracts/build/branchTest.bin')
     machine = SpeculativeMachine()
-    machine.program = program
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
+
 
     acceptance_criteria = [
         machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
         machine.last_return_value == BitVecVal(1, 256)
     ]
 
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
-    assert len(possible_ends) == 1
-    assert possible_ends[0]['results']['inputs'][0]['input_data'].hex() == branchTestInputRet1
+    solutions = SpeculativeUniverseExecutor(universe).get_solutions([contract.address], 
+                                                                    acceptance_criteria)
+    import pdb; pdb.set_trace()
+    # possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    assert len(solutions) == 1
+    assert solutions[0]['results']['inputs'][0]['input_data'].hex() == branchTestInputRet1
 
 symbolicReturn = "6080604052600436106039576000357c0100000000000000000000000000000000000000000000" + \
                  "00000000000090048063db89f05114603e575b600080fd5b348015604957600080fd5b50607d60" + \

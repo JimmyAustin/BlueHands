@@ -120,6 +120,9 @@ def eth_to_wei(eth_amount):
 def pad_bytes_to_address(value):
     return value + bytes(20 - len(value))
 
+def pad_bytes_to_arg(value):
+    return value + bytes(32 - len(value))
+
 # Removes random white space, and gets it ready as bytes.
 def ready_hex(value):
     return bytes.fromhex(''.join([x for x in value if x in hexdigits]))    
@@ -191,3 +194,24 @@ def is_bitvec(val):
     if val.__class__ == BitVecVal:
         return True
     return False
+
+def random_address():
+    import os
+    return os.urandom(20)
+
+def translate_ctx(value, context):
+    if getattr(value, 'translate', None) is not None:
+        try:
+            value_ctx = getattr(value, 'ctx', None)
+            if value_ctx is not None and value_ctx != context:
+                value = value.translate(context)
+        except Z3Exception:
+            pass
+    return value
+
+
+def hex_or_string(value):
+    try:
+        return value.hex()
+    except Exception:
+        return str(value)

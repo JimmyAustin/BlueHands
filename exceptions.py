@@ -12,8 +12,8 @@ class ReturnException(BaseException):
 
 
 class PathDivergenceException(BaseException):
-    def __init__(self, possible_machines):
-        self.possible_machines = possible_machines
+    def __init__(self, possible_universes):
+        self.possible_universes = possible_universes
 
 
 class ExecutionEndedException(BaseException):

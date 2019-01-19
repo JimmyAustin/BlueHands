@@ -43,8 +43,8 @@ class SpeculativeMachineExecutor():
                         print("Adding new invocation")
                         possible_machines.append(machine)
 
-            
             except ReturnException as e:
+                import pdb; pdb.set_trace()
                 print(identify_methods(machine))
                 print(f"{e.func_type} = {e.value}")
                 if e.should_revert:
@@ -65,8 +65,9 @@ class SpeculativeMachineExecutor():
                     machine.new_invocation()
                     possible_machines.append(machine)
 
-            except Exception as e:
-                raise e
+            # except Exception as e:
+            #     import pdb; pdb.set_trace()
+            #     raise e
 
         pool.close()
         pool.join()
