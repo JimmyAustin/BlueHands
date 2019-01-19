@@ -56,8 +56,6 @@ class SpeculativeMachine():
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = BitVec('LastReturnType', 256)
 
-        self.overflow_checks = []
-
         self.new_invocation()
 
     def new_invocation(self):
@@ -169,27 +167,31 @@ class SpeculativeMachine():
     def clone_with_context(self, new_context):
         new_machine = deepcopy(self)
 
-        new_machine.path_conditions = [translate_to_context_if_needed(x, new_context) for x in new_machine.path_conditions]
+        new_machine.path_conditions = [translate_ctx(x, new_context) for x in new_machine.path_conditions]
 
-        new_machine.attacker_wallet_starting = translate_to_context_if_needed(new_machine.attacker_wallet_starting, new_context)
-        new_machine.attacker_wallet = translate_to_context_if_needed(new_machine.attacker_wallet, new_context)
+        new_machine.attacker_wallet_starting = translate_ctx(new_machine.attacker_wallet_starting, new_context)
+        new_machine.attacker_wallet = translate_ctx(new_machine.attacker_wallet, new_context)
 
-        new_machine.first_timestamp = translate_to_context_if_needed(new_machine.first_timestamp, new_context)
-        new_machine.last_timestamp = translate_to_context_if_needed(new_machine.last_timestamp, new_context)
-        new_machine.last_return_value = translate_to_context_if_needed(new_machine.last_return_value, new_context)
-        new_machine.last_return_type = translate_to_context_if_needed(new_machine.last_return_type, new_context)
+        new_machine.first_timestamp = translate_ctx(new_machine.first_timestamp, new_context)
+        new_machine.last_timestamp = translate_ctx(new_machine.last_timestamp, new_context)
+        new_machine.last_return_value = translate_ctx(new_machine.last_return_value, new_context)
+        new_machine.last_return_type = translate_ctx(new_machine.last_return_type, new_context)
+
+        new_machine.wallet_amounts = {translate_ctx(k, new_context): translate_ctx(v, new_context) 
+                                      for k,v in new_machine.wallet_amounts.items()}
+
 
         new_machine.invocation_symbols = [{
-            'input_words': [translate_to_context_if_needed(x, new_context) for x in symbols['input_words']],
-            'input_words_by_index': {translate_to_context_if_needed(k, new_context): translate_to_context_if_needed(v, new_context)
+            'input_words': [translate_ctx(x, new_context) for x in symbols['input_words']],
+            'input_words_by_index': {translate_ctx(k, new_context): translate_ctx(v, new_context)
                                      for k, v in symbols['input_words_by_index'].items()},
-            'current_gas': translate_to_context_if_needed(symbols['current_gas'], new_context),
-            'timestamp': translate_to_context_if_needed(symbols['timestamp'], new_context),
+            'current_gas': translate_ctx(symbols['current_gas'], new_context),
+            'timestamp': translate_ctx(symbols['timestamp'], new_context),
 
-            'call_data_size': translate_to_context_if_needed(symbols['call_data_size'], new_context),
-            'call_value': translate_to_context_if_needed(symbols['call_value'], new_context),
-            'return_value': translate_to_context_if_needed(symbols['return_value'], new_context),
-            'return_type': translate_to_context_if_needed(symbols['return_type'], new_context)
+            'call_data_size': translate_ctx(symbols['call_data_size'], new_context),
+            'call_value': translate_ctx(symbols['call_value'], new_context),
+            'return_value': translate_ctx(symbols['return_value'], new_context),
+            'return_type': translate_ctx(symbols['return_type'], new_context)
         } for symbols in new_machine.invocation_symbols]
 
         return new_machine
@@ -405,10 +407,12 @@ def hex_or_string(value):
     except Exception:
         return str(value)
 
-def translate_to_context_if_needed(value, context):
+def translate_ctx(value, context):
     if getattr(value, 'translate', None) is not None:
         try:
-            return value.translate(context)
+            value_ctx = getattr(value, 'ctx', None)
+            if value_ctx is not None and value_ctx != context:
+                value = value.translate(context)
         except Z3Exception:
-            return value
+            pass
     return value

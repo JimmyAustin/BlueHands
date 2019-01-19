@@ -8,7 +8,6 @@ def identify_methods(machine):
         try:
             func_sig = identify_path_conditions(path_condition)
         except ValueError:
-            print(path_condition)
             func_sig = None
         if func_sig is None:
             continue

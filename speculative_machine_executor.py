@@ -1,6 +1,6 @@
 from exceptions import PathDivergenceException, ReturnException
 from z3 import Solver, SolverFor, sat, BitVecVal, Z3Exception, BitVec, simplify, Context
-from speculative_machine import SpeculativeMachine, translate_to_context_if_needed
+from speculative_machine import SpeculativeMachine, translate_ctx
 from utils import value_is_constant, pad_bytes_to_address, bytes_to_uint
 from pprint import pprint
 from method_identifier import identify_methods, identify_path_conditions
@@ -20,7 +20,7 @@ class SpeculativeMachineExecutor():
     def generate_single_possible_end(self, *args, **kwargs):
         return self.generate_possible_ends(*args, **kwargs).__next__
 
-    def possible_ends(self, acceptance_criteria=[], additional_requirements=[], multithreaded=False):
+    def possible_ends(self, acceptance_criteria=[], additional_requirements=[], multithreaded=True):
         queue = Queue()
         pool = ThreadPool(8)
 
@@ -54,10 +54,12 @@ class SpeculativeMachineExecutor():
                 context = Context()
                 cloned_machine = machine.clone_with_context(context)
                 if multithreaded == True:
-                    pool.apply_async(evaluate_machine, [queue, machine.clone(), context, e.func_type, 
-                                                        return_value, additional_requirements, acceptance_criteria])
+                    pool.apply_async(evaluate_machine, [queue, cloned_machine, context, e.func_type, 
+                                                        return_value,
+                                                        [x.translate(context) for x in additional_requirements],
+                                                        [x.translate(context) for x in acceptance_criteria]])
                 else:
-                    evaluate_machine(queue, machine, context, e.func_type, 
+                    evaluate_machine(queue, cloned_machine, context, e.func_type, 
                                                         return_value, additional_requirements, acceptance_criteria)
                 if machine.max_invocations > machine.current_invocation + 1:
                     machine.new_invocation()
@@ -84,43 +86,33 @@ def evaluate_machine(queue, machine, context, e_func_type, return_value, additio
 
         requirements = [*additional_requirements,
                         *acceptance_criteria]
-        print('1')
-
-        requirements.append(machine.last_return_type == return_type_enum)
-        print('2')
-        requirements.append(machine.attacker_wallet == get_wallet_amount(machine, machine.sender_address))
-        print('3')
-        requirements.append(machine.first_timestamp == machine.invocation_symbols[0]['timestamp'])
-        print('4')
-        requirements.append(machine.last_timestamp == machine.invocation_symbols[-1]['timestamp'])
-        print('5')
-                        
+        requirements.append(translate_ctx(machine.last_return_type, context) == 
+                            translate_ctx(return_type_enum, context))
+        requirements.append(translate_ctx(machine.attacker_wallet, context) == 
+                            translate_ctx(get_wallet_amount(machine, machine.sender_address), context))
+        requirements.append(translate_ctx(machine.first_timestamp, context) == 
+                            translate_ctx(machine.invocation_symbols[0]['timestamp'], context))
+        requirements.append(translate_ctx(machine.last_timestamp, context) == 
+                            translate_ctx(machine.invocation_symbols[-1]['timestamp'], context))                        
         if return_value is not None:
-            last_return_val = translate_to_context_if_needed(machine.last_return_value, context)
-            return_val = translate_to_context_if_needed(return_value, context)
+            last_return_val = translate_ctx(machine.last_return_value, context)
+            return_val = translate_ctx(return_value, context)
             requirements.append(last_return_val == return_val)
-        print('6')
-
-
-
 
         input_values = calculate_results_for_machine(
             machine, requirements=requirements, context=context)
-        print("INPUT VALUES")
-        print(input_values)
         if input_values:
             result = {
                 #'machine': machine,
                 'type': e_func_type,
                 'value': str(return_value),
-                'path_conditions': [x.__repr__() for x in machine.path_conditions],
-                'invocations': machine.current_invocation,
-                'requirements': [x.__repr__() for x in requirements],
+                # 'path_conditions': [x.__repr__() for x in machine.path_conditions],
+                # 'invocations': machine.current_invocation,
+                # 'requirements': [x.__repr__() for x in requirements],
                 'methods': identify_methods(machine),
-                'results': input_values
+                'results': input_values,
+                #'results': str(input_values)
             }
-            
-            print(result) 
             queue.put(result)
 
     except Exception as exp:
@@ -153,9 +145,8 @@ def sated_solver_for_machine(machine, requirements=[], context=None):
                *getattr(machine, 'temp_path_conditions', []),
                *[v >= 0 for _, v in machine.wallet_amounts.items() if value_is_constant(v) is False]]
     for condition in all_conditions:
-        if context is not None and condition.ctx != context:
-            condition = condition.translate(context)
-        print(condition)
+        if context is not None:
+            condition = translate_ctx(condition, context)
         solver.add(condition)
 #    solver.add(*all_conditions)
     # for condition in machine.path_conditions:
@@ -172,18 +163,18 @@ def sated_solver_for_machine(machine, requirements=[], context=None):
         return None
     return solver
 
-def add_temp_wallet_amounts_for_variables(machine):
+def add_temp_wallet_amounts_for_variables(machine, context):
     # This seems like a hack. We should consider removing.
     machine.temp_wallet_amounts = {}
     machine.temp_path_conditions = []
     for k, v in machine.wallet_amounts.items():
         if value_is_constant(v) is False:
-            symbol = BitVec(f"{k.hex()}_Wallet", 256)
+            symbol = BitVec(f"{k.hex()}_Wallet", 256, ctx=context)
             machine.temp_path_conditions.append(symbol == v)
             machine.temp_wallet_amounts[k] = symbol
 
 def calculate_results_for_machine(machine, requirements=[], context=None):
-    add_temp_wallet_amounts_for_variables(machine)
+    add_temp_wallet_amounts_for_variables(machine, context)
     solver = sated_solver_for_machine(machine, requirements, context=context)
     if solver is None:
         return None
@@ -225,7 +216,7 @@ def calculate_results_for_machine(machine, requirements=[], context=None):
 
         if call_data_size is not None and exists_in_model:
             if context is not None:
-                call_data_size = call_data_size.translate(context)
+                call_data_size = translate_ctx(call_data_size, context)
             call_data_size = identify_minimum_value(solver, call_data_size)
             grouped_input['call_data_size'] = call_data_size
             total_value = total_value[:call_data_size]
@@ -234,7 +225,7 @@ def calculate_results_for_machine(machine, requirements=[], context=None):
         'inputs': [{
             'input_data': x['result'],
             'call_data_size': x['call_data_size'],
-            'timestamp': get_field(model, x['timestamp']).as_long(),
+            'timestamp': long_if_not_none(get_field(model, x['timestamp'])),
         }
         for x in grouped_inputs],
         'wallets': generate_wallet_values(machine, model)
@@ -244,7 +235,10 @@ def generate_wallet_values(machine, model):
     def get_value(wallet_address, wallet_value):
         if value_is_constant(wallet_value):
             return wallet_value
-        return model[machine.temp_wallet_amounts[wallet_address]]
+        value = model[machine.temp_wallet_amounts[wallet_address]]
+        if getattr(value, 'as_long', None) is not None:
+            return value.as_long()
+        return value
     return {k: get_value(k, value) for k, value in machine.wallet_amounts.items()}
 
 def identify_minimum_value(solver, field, index=None, minV=0, maxV=9000000):
@@ -271,6 +265,11 @@ def get_field(model, field):
         return model[field]
     except Z3Exception:
         return None
+
+def long_if_not_none(val):
+    if val is None:
+        return val
+    return val.as_long()
 
 def enum_for_return_type(return_type):
     if return_type == 'return':
