@@ -2,7 +2,7 @@ import sha3
 from stack import Stack
 from memory import Memory
 from exceptions import ExecutionEndedException, ReturnException, EmptyWalletException
-from z3 import BitVec, BitVecVal, Extract, Solver, sat, BVSubNoOverflow
+from z3 import BitVec, BitVecVal, Extract, Solver, sat, BVSubNoOverflow, Z3Exception
 from utils import bytes_to_int, pad_bytes_to_address, value_is_constant, bytes_to_uint, uint_to_bytes
 from stack import Stack
 from opcodes.opcode_builder import OpcodeBuilder
@@ -165,6 +165,34 @@ class SpeculativeMachine():
 
     def clone(self):
         return deepcopy(self)
+
+    def clone_with_context(self, new_context):
+        new_machine = deepcopy(self)
+
+        new_machine.path_conditions = [translate_to_context_if_needed(x, new_context) for x in new_machine.path_conditions]
+
+        new_machine.attacker_wallet_starting = translate_to_context_if_needed(new_machine.attacker_wallet_starting, new_context)
+        new_machine.attacker_wallet = translate_to_context_if_needed(new_machine.attacker_wallet, new_context)
+
+        new_machine.first_timestamp = translate_to_context_if_needed(new_machine.first_timestamp, new_context)
+        new_machine.last_timestamp = translate_to_context_if_needed(new_machine.last_timestamp, new_context)
+        new_machine.last_return_value = translate_to_context_if_needed(new_machine.last_return_value, new_context)
+        new_machine.last_return_type = translate_to_context_if_needed(new_machine.last_return_type, new_context)
+
+        new_machine.invocation_symbols = [{
+            'input_words': [translate_to_context_if_needed(x, new_context) for x in symbols['input_words']],
+            'input_words_by_index': {translate_to_context_if_needed(k, new_context): translate_to_context_if_needed(v, new_context)
+                                     for k, v in symbols['input_words_by_index'].items()},
+            'current_gas': translate_to_context_if_needed(symbols['current_gas'], new_context),
+            'timestamp': translate_to_context_if_needed(symbols['timestamp'], new_context),
+
+            'call_data_size': translate_to_context_if_needed(symbols['call_data_size'], new_context),
+            'call_value': translate_to_context_if_needed(symbols['call_value'], new_context),
+            'return_value': translate_to_context_if_needed(symbols['return_value'], new_context),
+            'return_type': translate_to_context_if_needed(symbols['return_type'], new_context)
+        } for symbols in new_machine.invocation_symbols]
+
+        return new_machine
 
     def clone_and_restart_execution(self):
         clone = self.clone()
@@ -376,3 +404,11 @@ def hex_or_string(value):
         return value.hex()
     except Exception:
         return str(value)
+
+def translate_to_context_if_needed(value, context):
+    if getattr(value, 'translate', None) is not None:
+        try:
+            return value.translate(context)
+        except Z3Exception:
+            return value
+    return value

@@ -5,7 +5,11 @@ from utils import uint_to_bytes, information_for_function_sig
 def identify_methods(machine):
     method_calls = []
     for path_condition in machine.path_conditions:
-        func_sig = identify_path_conditions(path_condition)
+        try:
+            func_sig = identify_path_conditions(path_condition)
+        except ValueError:
+            print(path_condition)
+            func_sig = None
         if func_sig is None:
             continue
         method_calls.append(information_for_function_sig(func_sig)['name'])
