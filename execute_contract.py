@@ -53,7 +53,7 @@ for function_call in function_calls:
             return int_to_bytes(arg)
         raise ValueError('Unknown arg type: {arg}')
     args = [transform_argument(x) for x in function_call[1:]]
-    print(f"Executing: {function_call[0]} - {function_calls[1:]}")
+    #print(f"Executing: {function_call[0]} - {function_calls[1:]}")
     result = machine.execute_function_named(function_call[0], args)
     print(f"Return Type: {result.func_type}")
     if result.func_type == 'return':

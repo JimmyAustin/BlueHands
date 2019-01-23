@@ -123,6 +123,10 @@ def pad_bytes_to_address(value):
 def pad_bytes_to_arg(value):
     return value + bytes(32 - len(value))
 
+def pad_bytes_to_arg_front(value):
+    return bytes(32 - len(value)) + value
+
+
 # Removes random white space, and gets it ready as bytes.
 def ready_hex(value):
     return bytes.fromhex(''.join([x for x in value if x in hexdigits]))    

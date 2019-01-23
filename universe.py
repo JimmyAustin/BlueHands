@@ -2,8 +2,8 @@ from utils import pad_bytes_to_arg, hex_or_string
 from contract import Contract
 from execution_context import ExecutionContext
 from copy import deepcopy
-from z3 import BitVec
-from utils import translate_ctx
+from z3 import BitVec, SolverFor, sat
+from utils import translate_ctx, value_is_constant, bytes_to_uint
 from enums import EXECUTION_TYPE_CONCRETE, EXECUTION_TYPE_SYMBOLIC, CALL_METHOD_ROOT
 
 
@@ -14,13 +14,25 @@ class Universe():
         self.path_conditions = []
         self.logging = logging
 
+        self.seen_hashes = {}
+
         self.first_timestamp = BitVec('FirstTimestamp', 256)
         self.last_timestamp = BitVec('LastTimestamp', 256)
         self.last_return_value = BitVec('LastReturnValue', 256)
         self.last_return_type = BitVec('LastReturnType', 256)
 
+        self.attacker_contract = None
 
-    def deploy_contract(self, binary, args=[], address=None, is_runtime=False):
+
+    def deploy_wallet(self, address=None, starting_wallet_amount=0, is_attacker=False):
+        contract = Contract(bytes(), address=address, universe=self,
+                            starting_wallet_amount=starting_wallet_amount)
+        self.contracts[contract.address] = contract
+        if is_attacker:
+            self.attacker_contract = contract
+        return contract        
+
+    def deploy_contract(self, binary, args=[], address=None, is_runtime=False, call_value=bytes(32)):
         for arg in args:
             binary = binary + pad_bytes_to_arg(arg)
         
@@ -29,7 +41,7 @@ class Universe():
         exec_context = ExecutionContext('deploy', contract, universe=self, 
                                         call_method=CALL_METHOD_ROOT,
                                         execution_type=EXECUTION_TYPE_CONCRETE,
-                                        call_value=bytes(32),
+                                        call_value=call_value,
                                         input_data=bytes())
 
         result = exec_context.execute()
@@ -47,7 +59,8 @@ class Universe():
                              self.contracts[target_contract_address], 
                              universe=self, 
                              call_method=CALL_METHOD_ROOT,
-                             execution_type=EXECUTION_TYPE_SYMBOLIC)
+                             execution_type=EXECUTION_TYPE_SYMBOLIC,
+                             caller=self.attacker_contract)
             ])
 
     def clone(self):
@@ -69,6 +82,11 @@ class Universe():
 
         return clone
 
+    def add_path_condition(self, path_condition):
+        if path_condition == False:
+            import pdb; pdb.set_trace()
+        self.path_conditions.append(path_condition)
+
     def first_execution_context_stack(self):
         return self.execution_context_stacks[0][0]
 
@@ -79,6 +97,7 @@ class Universe():
         return self.execution_context_stacks[-1][-1]
 
     def dump_state(self):
+        import pdb; pdb.set_trace()
         for i, execution_context_stack in enumerate(self.execution_context_stacks):
             print("EXECUTION_CONTEXT_STACK {i}")
             for y, execution_context in enumerate(execution_context_stack):
@@ -88,3 +107,33 @@ class Universe():
                     print(f"{i}: 0x{hex_or_string(value)}")
         for _, contract in self.contracts.items():
             contract.dump_state()
+
+    def assert_constraints(self, *constraints):
+        solver = SolverFor('QF_UFBV')
+        solver.add(*constraints)
+        solver.add(*self.path_conditions)
+        assert solver.check() == sat
+
+    def credit_wallet_amount(self, to_address, value):
+        if len(to_address) > 20:
+            to_address =  to_address[12:]
+        try:
+            value = bytes_to_uint(value)
+        except Exception as e:
+            pass
+        self.contracts[to_address].wallet_amount += value
+
+    def debit_wallet_amount(self, address, value):
+        if len(address) > 20:
+            address =  address[12:]
+        try:
+            value = bytes_to_uint(value)
+        except Exception as e:
+            pass
+        self.path_conditions.append(self.contracts[address].wallet_amount >= value)
+        self.contracts[address].wallet_amount -= value
+        if value_is_constant(self.contracts[address].wallet_amount):
+            if self.contracts[address].wallet_amount < 0:
+                raise EmptyWalletException(address)
+        else:
+            self.path_conditions.append(self.contracts[address].wallet_amount >= 0)

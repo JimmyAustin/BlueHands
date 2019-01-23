@@ -1,9 +1,4 @@
-from ..opcode import Opcode
-
-
-class CallerOpcode(Opcode):
-    def __init__(self, instruction):
-        super().__init__(instruction)
-
-    def execute(self, machine):
-        machine.stack.push(machine.sender_address)
+def caller_op(execution_context, contract, universe):
+    caller = execution_context.caller
+    caller = getattr(caller, 'address', caller)
+    execution_context.stack.push(caller)

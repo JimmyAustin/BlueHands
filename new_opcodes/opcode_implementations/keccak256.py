@@ -5,23 +5,23 @@ from z3 import IntSort, Const, If, BitVecSort, Or
 def keccak256_op(execution_context, contract, universe):
     address = execution_context.stack.pop()
     length = execution_context.stack.pop()
-    memory_value = execution_context.memory.get(address, length)
+    memory_value = contract.memory.get(address, length)
     if value_is_constant(memory_value):
         k = sha3.keccak_256()
         k.update(memory_value)
         digest = k.digest()
-        execution_context.hash_map[bytes(memory_value)] = digest
+        universe.seen_hashes[bytes(memory_value)] = digest
         print("Throwing hash")
-        print(execution_context.hash_map)
+        print(universe.seen_hashes)
         execution_context.stack.push(digest)
     else:
         result = Const(False, BitVecSort(256))
 
-        for k, v in execution_context.hash_map.items():
+        for k, v in universe.seen_hashes.items():
             #if len(k) == memory_value.size():
             result = If(memory_value == bytes_to_uint(k), bytes_to_uint(v), result)
-        orSet = Or([memory_value == bytes_to_uint(k) for k in execution_context.hash_map.keys()])
-        execution_context.path_conditions.append(orSet)
+        orSet = Or([memory_value == bytes_to_uint(k) for k in universe.seen_hashes.keys()])
+        universe.path_conditions.append(orSet)
         execution_context.stack.push(result)
 
 # class Keccak256Opcode(Opcode):

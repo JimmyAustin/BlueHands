@@ -1,6 +1,7 @@
 from exceptions import PathDivergenceException, ReturnException
 from z3 import Solver, SolverFor, sat, BitVecVal, Z3Exception, BitVec, simplify, Context
-from utils import value_is_constant, pad_bytes_to_address, bytes_to_uint, translate_ctx, uint_to_bytes
+from utils import value_is_constant, pad_bytes_to_address, bytes_to_uint, translate_ctx, uint_to_bytes, \
+    parse_solidity_abi_input
 from pprint import pprint
 from method_identifier import identify_methods, identify_path_conditions
 from multiprocessing import Queue
@@ -11,10 +12,11 @@ from enums import *
 
 
 class SpeculativeUniverseExecutor():
-    def __init__(self, universe, max_invocations=1, multithreaded=True):
+    def __init__(self, universe, max_invocations=2, multithreaded=True):
         self.universe = universe
         self.multithreaded = multithreaded
         self.max_invocations = max_invocations
+        self.branches_evaluated = 0
 
     def get_solutions(self, target_contract_addresses, acceptance_criteria):
         queue = Queue()
@@ -51,11 +53,15 @@ class SpeculativeUniverseExecutor():
                 else:
                     evaluate_universe(queue, cloned_universe, context, e.func_type, 
                                       return_value, acceptance_criteria)
-                if self.max_invocations > len(universe.execution_context_stacks) + 1:
+                self.branches_evaluated += 1
+                from pprint import pprint
+                pprint(next_universe.path_conditions)
+                pprint(acceptance_criteria)
+                if self.max_invocations > len(universe.execution_context_stacks):
                     for target_contract_address in target_contract_addresses:
-                        universe = self.universe.clone()
-                        universe.add_speculative_context_stack(target_contract_address)
-                        possible_universes.append(universe)
+                        clone_universe = next_universe.clone()
+                        clone_universe.add_speculative_context_stack(target_contract_address)
+                        possible_universes.append(clone_universe)
 
         pool.close()
         pool.join()
@@ -87,9 +93,12 @@ def evaluate_universe(queue, universe, context, e_func_type, return_value, accep
             last_return_val = translate_ctx(universe.last_return_value, context)
             return_val = translate_ctx(return_value, context)
             requirements.append(last_return_val == return_val)
-        input_values = calculate_results_for_universe(universe, requirements=requirements,
-                                                      context=context)
+        input_values, model = calculate_results_for_universe(universe, requirements=requirements,
+                                                             context=context)
         if input_values:
+            if return_value is not None and value_is_constant(return_value) is False:
+                return_value = model[last_return_val]
+
             result = {
                 #'machine': machine,
                 'type': e_func_type,
@@ -122,11 +131,15 @@ def add_temp_wallet_amounts_for_variables(universe, context):
             universe.temp_path_conditions.append(symbol == contract.wallet_amount)
             universe.temp_wallet_amounts[address] = symbol
 
+        condition = translate_ctx(contract.wallet, context) == translate_ctx(contract.wallet_amount, context)
+        universe.temp_path_conditions.append(condition)
+            
+
 def calculate_results_for_universe(universe, requirements=[], context=None):
     add_temp_wallet_amounts_for_variables(universe, context)
     solver = sated_solver_for_universe(universe, requirements, context=context)
     if solver is None:
-        return None
+        return None, None
     model = solver.model()
 
     indexed_model = {x.name(): model[x] for x in model}
@@ -144,66 +157,67 @@ def calculate_results_for_universe(universe, requirements=[], context=None):
 
         return {
             'input_data': input_data,
+            'solidity_abi_input': parse_solidity_abi_input(input_data),
             'call_data_size': call_data_size,
             'timestamp': long_if_not_none(indexed_model[base_context.timestamp.__repr__()])
         }
 
-    return {
+    return ({
         'inputs': [build_execution_context_stack_input_summary(x) 
                    for x in universe.execution_context_stacks],
         'wallets': generate_wallet_values(universe, indexed_model)
-    }
+    }, model)
 
-    grouped_inputs = [{
-        'input_symbols': [],
-        'model_call_data_size': None,
-        'call_data_size': universe.invocation_symbols[i]['call_data_size'],
-        'timestamp': None
-    } for i in range(0, universe.current_invocation+1)]
+    # grouped_inputs = [{
+    #     'input_symbols': [],
+    #     'model_call_data_size': None,
+    #     'call_data_size': universe.invocation_symbols[i]['call_data_size'],
+    #     'timestamp': None
+    # } for i in range(0, universe.current_invocation+1)]
 
-    for model_input in model:
-        name = model_input.name()
-        if name.startswith('input_'):
-            invocation = get_symbol_invocation_from_name(name)
-            grouped_inputs[invocation]['input_symbols'].append(model_input)
-        elif name.startswith('CallDataSize'):
-            invocation = get_symbol_invocation_from_name(name)
-            grouped_inputs[invocation]['model_call_data_size'] = model_input
-        elif name.startswith('Timestamp'):
-            invocation = get_symbol_invocation_from_name(name)
-            grouped_inputs[invocation]['timestamp'] = model_input
-    # if len(grouped_inputs) > 1:
-    #     import pdb; pdb.set_trace()
-    for grouped_input in grouped_inputs:
-        inputs = sorted(grouped_input['input_symbols'], key=lambda x: x.name())
-        values = [model[x] for x in inputs]
-        byte_values = [int(x.as_signed_long()).to_bytes(
-            32, 'big', signed=True) for x in values]
-        total_value = b''.join(byte_values)
+    # for model_input in model:
+    #     name = model_input.name()
+    #     if name.startswith('input_'):
+    #         invocation = get_symbol_invocation_from_name(name)
+    #         grouped_inputs[invocation]['input_symbols'].append(model_input)
+    #     elif name.startswith('CallDataSize'):
+    #         invocation = get_symbol_invocation_from_name(name)
+    #         grouped_inputs[invocation]['model_call_data_size'] = model_input
+    #     elif name.startswith('Timestamp'):
+    #         invocation = get_symbol_invocation_from_name(name)
+    #         grouped_inputs[invocation]['timestamp'] = model_input
+    # # if len(grouped_inputs) > 1:
+    # #     import pdb; pdb.set_trace()
+    # for grouped_input in grouped_inputs:
+    #     inputs = sorted(grouped_input['input_symbols'], key=lambda x: x.name())
+    #     values = [model[x] for x in inputs]
+    #     byte_values = [int(x.as_signed_long()).to_bytes(
+    #         32, 'big', signed=True) for x in values]
+    #     total_value = b''.join(byte_values)
 
-        call_data_size = grouped_input['call_data_size']
+    #     call_data_size = grouped_input['call_data_size']
 
-        if grouped_input['model_call_data_size'] is None:
-            exists_in_model = False
-        else:
-            exists_in_model = True
+    #     if grouped_input['model_call_data_size'] is None:
+    #         exists_in_model = False
+    #     else:
+    #         exists_in_model = True
 
-        if call_data_size is not None and exists_in_model:
-            if context is not None:
-                call_data_size = translate_ctx(call_data_size, context)
-            call_data_size = identify_minimum_value(solver, call_data_size)
-            grouped_input['call_data_size'] = call_data_size
-            total_value = total_value[:call_data_size]
-        grouped_input['result'] = total_value
-    return {
-        'inputs': [{
-            'input_data': x['result'],
-            'call_data_size': x['call_data_size'],
-            'timestamp': long_if_not_none(get_field(model, x['timestamp'])),
-        }
-        for x in grouped_inputs],
-        'wallets': generate_wallet_values(universe, model)
-    }
+    #     if call_data_size is not None and exists_in_model:
+    #         if context is not None:
+    #             call_data_size = translate_ctx(call_data_size, context)
+    #         call_data_size = identify_minimum_value(solver, call_data_size)
+    #         grouped_input['call_data_size'] = call_data_size
+    #         total_value = total_value[:call_data_size]
+    #     grouped_input['result'] = total_value
+    # return {
+    #     'inputs': [{
+    #         'input_data': x['result'],
+    #         'call_data_size': x['call_data_size'],
+    #         'timestamp': long_if_not_none(get_field(model, x['timestamp'])),
+    #     }
+    #     for x in grouped_inputs],
+    #     'wallets': generate_wallet_values(universe, model)
+    # }
 
 def generate_wallet_values(universe, model):
     def get_value(wallet_address, wallet_value):

@@ -7,6 +7,7 @@ from utils import bytes_to_int, int_to_bytes, parse_solidity_abi_input, func_sig
 from universe import Universe 
 from speculative_machine_executor import calculate_results_for_machine
 from speculative_universe_executor import SpeculativeUniverseExecutor
+from enums import RETURN_TYPE_RETURN, RETURN_TYPE_STOP
 
 # contract branchTest {
 #   function renderAdd (int value) public pure returns (int) {
@@ -24,7 +25,6 @@ branchTestInputRet0 = 'a6c14f8d0000000000000000000000000000000000000000000000000
 
 def test_identify_return_paths():
     binary = load_binary('./contracts/build/branchTest.bin')
-    machine = SpeculativeMachine()
 
     universe = Universe()
     contract = universe.deploy_contract(binary)
@@ -63,23 +63,20 @@ def test_input():
 
 
 def test_have_acceptance_criteria():
-
     binary = load_binary('./contracts/build/branchTest.bin')
-    machine = SpeculativeMachine()
 
     universe = Universe()
     contract = universe.deploy_contract(binary)
 
 
     acceptance_criteria = [
-        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(1, 256)
+        universe.last_return_type == RETURN_TYPE_RETURN,
+        universe.last_return_value == BitVecVal(1, 256)
     ]
 
     solutions = SpeculativeUniverseExecutor(universe).get_solutions([contract.address], 
                                                                     acceptance_criteria)
-    import pdb; pdb.set_trace()
-    # possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+
     assert len(solutions) == 1
     assert solutions[0]['results']['inputs'][0]['input_data'].hex() == branchTestInputRet1
 
@@ -99,42 +96,43 @@ symbolicReturn = "6080604052600436106039576000357c010000000000000000000000000000
 # }
 
 def test_symbolic_return():
-    program = bytes.fromhex(symbolicReturn)
-    machine = SpeculativeMachine()
-    machine.program = program
+    binary = load_binary('./contracts/build/add_branch.bin')
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
 
     acceptance_criteria = [
-        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(5, 256)
+        universe.last_return_type == RETURN_TYPE_RETURN,
+        universe.last_return_value == BitVecVal(5, 256)
     ]
 
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    solutions = SpeculativeUniverseExecutor(universe).get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
 
-    assert len(possible_ends) == 1
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
+    assert len(solutions) == 1
+    solidity_input = parse_solidity_abi_input(solutions[0]['results']['inputs'][0]['input_data'])
     print(solidity_input)
     assert (sum([x['val'] for x in solidity_input['args']]) % 2 ** 256) == 5
 
 # Fix the first arg to 3, should set the second arg to 2
-def test_symbolic_return_fix_arg():
-    program = bytes.fromhex(symbolicReturn)
-    machine = SpeculativeMachine()
-    machine.program = program
+# def test_symbolic_return_fix_arg():
+#     program = bytes.fromhex(symbolicReturn)
+#     machine = SpeculativeMachine()
+#     machine.program = program
 
-    machine.fix_input(int_to_bytes(3), 4)
+#     machine.fix_input(int_to_bytes(3), 4)
 
-    acceptance_criteria = [
-        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(5, 256),
-    ]
+#     acceptance_criteria = [
+#         machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+#         machine.last_return_value == BitVecVal(5, 256),
+#     ]
 
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+#     possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
 
-    assert len(possible_ends) == 1
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
+#     assert len(possible_ends) == 1
+#     solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
 
-    assert solidity_input['args'][0]['val'] == 3
-    assert solidity_input['args'][1]['val'] == 2
+#     assert solidity_input['args'][0]['val'] == 3
+#     assert solidity_input['args'][1]['val'] == 2
 
 
 
@@ -158,21 +156,27 @@ addGet = "6080604052600436106043576000357c01000000000000000000000000000000000000
          "2b46514ba154b31c5567e118051f19f3a5cc3d56b30d8967550029"
 
 def test_multifunction_calls():
-    program = bytes.fromhex(addGet)
-    machine = SpeculativeMachine(max_invocations=2)
-    machine.program = program
+    binary = load_binary('./contracts/build/Addition.bin')
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
 
     acceptance_criteria = [
-        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(5, 256),
+        universe.last_return_type == RETURN_TYPE_RETURN,
+        universe.last_return_value == BitVecVal(5, 256)
     ]
 
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
-    
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
+    solutions = SpeculativeUniverseExecutor(universe).get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
 
-    assert solidity_input['args'][0]['val'] + solidity_input['args'][1]['val'] == 5
-    assert possible_ends[0]['methods'] == ['add(int256,int256)', 'get()']
+    assert len(solutions) == 1
+    
+    solution_inputs = solutions[0]['results']['inputs']
+    
+    assert solution_inputs[0]['solidity_abi_input']['func_info']['name'] == 'add(int256,int256)'
+    assert solution_inputs[1]['solidity_abi_input']['func_info']['name'] == 'get()'
+
+    assert (sum([x['val'] for x in solution_inputs[0]['solidity_abi_input']['args']]) % 2 ** 256) == 5
+
 
 set_add = """
 6080604052348015600f57600080fd5b5060043610604f576000357c0100000000
@@ -196,24 +200,26 @@ ef5f4cc9b1103d0675626cb0cfc616b15088aa7615e7557c550029
 # }
 
 def test_setting_up_before():
-    program = ready_hex(set_add)
-    machine = SpeculativeMachine(logging=False)
-    machine.program = program
+    binary = load_binary('./contracts/build/set_add.bin')
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
 
     acceptance_criteria = [
-        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(5, 256),
+        universe.last_return_type == RETURN_TYPE_RETURN,
+        universe.last_return_value == BitVecVal(5, 256)
     ]
 
-    return_value = machine.execute_deterministic_function(func_sig('set(int256)'),
-                                                          args=[int_to_bytes(2)])
+    contract.execute_function('set(int256)', args=[int_to_bytes(2)])
 
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    solutions = SpeculativeUniverseExecutor(universe, max_invocations=1).get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
 
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
-
-    assert solidity_input['func'].hex() == '846719e0'
-    assert solidity_input['args'][0]['val'] == 3
+    assert len(solutions) == 1
+    
+    solution_inputs = solutions[0]['results']['inputs']
+    
+    assert solution_inputs[0]['solidity_abi_input']['func_info']['name'] == 'get(int256)'
+    assert solution_inputs[0]['solidity_abi_input']['args'][0]['val'] == 3
 
 
 passwordWithdraw = """
@@ -229,22 +235,30 @@ ffffffffffffffffffffffff1661c3506040518060000190506000604051808303
 d8de41d5fb0029"""
 
 def test_can_get_money_out():
-    program = ready_hex(passwordWithdraw)
-    machine = SpeculativeMachine()
-    machine.deploy(program)
+    binary = load_binary('./contracts/build/password_withdraw.bin')
 
-    acceptance_criteria = [
-        machine.attacker_wallet_starting == 0,
-        machine.attacker_wallet > 0
-    ]
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
 
     # Deposit the money we are going to steal.
-    machine.execute_deterministic_function(bytes(), args=[],
-                                           call_value=(50000000))
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    universe.credit_wallet_amount(contract.address, 50000000)
+
+    attacker_wallet = universe.deploy_wallet(is_attacker=True)
+
+    acceptance_criteria = [
+        attacker_wallet.wallet == 50000
+    ]
+
+    executor = SpeculativeUniverseExecutor(universe, max_invocations=1)
+    solutions = executor.get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
  
-    assert len(possible_ends) > 0
-    assert possible_ends[0]['results']['wallets'][machine.sender_address] == 50000
+    assert len(solutions) == 1
+
+    solution_inputs = solutions[0]['results']['inputs']
+    assert solution_inputs[0]['solidity_abi_input']['args'][0]['val'] == 5
+    assert solutions[0]['results']['wallets'][attacker_wallet.address] == 50000
+    assert solutions[0]['results']['wallets'][contract.address] == 50000000 - 50000
+
 
 
 address_params = """
@@ -268,23 +282,27 @@ fffffffff1614905091905056fea165627a7a723058200620c506360505
 # }
 
 def test_address_param_values():
-    program = ready_hex(address_params)
-    machine = SpeculativeMachine(logging=False)
-    machine.program = program
+    binary = load_binary('./contracts/build/address_return.bin')
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
+
+    attacker_wallet = universe.deploy_wallet(is_attacker=True)
 
     acceptance_criteria = [
-        machine.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
-        machine.last_return_value == BitVecVal(1, 256),
+        universe.last_return_type == SpeculativeMachine.RETURN_TYPE_RETURN,
+        universe.last_return_value == BitVecVal(1, 256),
     ]
 
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    executor = SpeculativeUniverseExecutor(universe, max_invocations=1)
+    solutions = executor.get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
 
-    assert len(possible_ends) == 1
+    assert len(solutions) == 1
 
-    solidity_input = parse_solidity_abi_input(possible_ends[0]['results']['inputs'][0]['input_data'])
+    solution_input = solutions[0]['results']['inputs'][0]['solidity_abi_input']
 
-    assert solidity_input['func'].hex() == 'ad065eb5'
-    assert solidity_input['args'][0]['val'] == machine.sender_address.hex()
+    assert solution_input['func'].hex() == 'ad065eb5'
+    assert solution_input['args'][0]['val'] == attacker_wallet.address.hex()
 
 
 bankCFOVuln = """
@@ -324,66 +342,131 @@ bankCFOVuln = """
 
 
 def test_attack_actually_exists():
-    program = ready_hex(bankCFOVuln)
-    machine = SpeculativeMachine(max_invocations=1, logging=False)
-    machine.wallet_amounts[machine.sender_address] = 0
-    machine.program = program
-    cfo = pad_bytes_to_address(b'XCF0X')
+    binary = load_binary('./contracts/build/bankCFOVuln.bin')
 
-    machine.execute_deterministic_function(func_sig('setCFO(address)'),
-                                           args=[cfo],
-                                           call_value=0,
-                                           sender=cfo)
-    machine.execute_deterministic_function(func_sig('deposit()'),
-                                           args=[],
-                                           call_value=(eth_to_wei(5)),
-                                           sender=cfo)
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
+        
+    attacker_wallet = universe.deploy_wallet(is_attacker=True)
+    cfo_wallet = universe.deploy_wallet(starting_wallet_amount=eth_to_wei(5))
 
-    # Actual attack. Take control of CFO positon, then pillage the wallet.
-    print("Launching attack")
-    machine.execute_deterministic_function(func_sig('setCFO(address)'),
-                                           args=[machine.sender_address],
-                                           call_value=0,
-                                           sender=machine.sender_address)
-    print("Took CFO, now withdrawing")
-    machine.execute_deterministic_function(func_sig('cfoWithdraw(address,uint256)'),
-                                           args=[cfo, int_to_bytes(eth_to_wei(5))],
-                                           call_value=0,
-                                           sender=machine.sender_address)
+    result = contract.execute_function('setCFO(address)', args=[cfo_wallet.address],
+                              sender=cfo_wallet.address)
+    assert result['func'] == 'stop'
 
-    assert machine.wallet_amounts[machine.sender_address] == eth_to_wei(5)
+    result = contract.execute_function('deposit()', args=[],
+                              call_value=int_to_bytes(eth_to_wei(5)), sender=cfo_wallet.address)
+    assert result['func'] == 'stop'
+
+    result = contract.execute_function('setCFO(address)', args=[attacker_wallet.address],
+                              sender=attacker_wallet.address)
+
+    assert result['func'] == 'stop'
+    result = contract.execute_function('cfoWithdraw(address,uint256)', 
+                              args=[cfo_wallet.address, int_to_bytes(eth_to_wei(5))],
+                              sender=attacker_wallet.address)
+    assert result['func'] == 'stop'
+
+    assert universe.contracts[attacker_wallet.address].wallet_amount == eth_to_wei(5)
 
 
 def test_wallet_transfers_easy_mode():
-    program = ready_hex(bankCFOVuln)
-    machine = SpeculativeMachine(program=program, max_invocations=1, logging=False)
+    binary = load_binary('./contracts/build/bankCFOVuln.bin')
 
-    cfo = pad_bytes_to_address(b'XCF0X')
-    print("CFO:", cfo.hex())
-    machine.execute_deterministic_function(func_sig('setCFO(address)'),
-                                           args=[cfo],
-                                           call_value=0,
-                                           sender=cfo)
-    machine.execute_deterministic_function(func_sig('deposit()'),
-                                           args=[],
-                                           call_value=(eth_to_wei(5)),
-                                           sender=cfo)
-    machine.execute_deterministic_function(func_sig('setCFO(address)'),
-                                           args=[machine.sender_address],
-                                           call_value=0,
-                                           sender=machine.sender_address)
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
+    
+    attacker_wallet = universe.deploy_wallet(is_attacker=True)
+    cfo_wallet = universe.deploy_wallet(starting_wallet_amount=eth_to_wei(5))
+
+    contract.execute_function('setCFO(address)', args=[cfo_wallet.address],
+                              sender=cfo_wallet.address)
+
+    contract.execute_function('deposit()', args=[],
+                              call_value=int_to_bytes(eth_to_wei(5)), sender=cfo_wallet.address)
+
+    contract.execute_function('setCFO(address)', args=[attacker_wallet.address],
+                              sender=attacker_wallet.address)
+
     acceptance_criteria = [
-        machine.attacker_wallet > machine.attacker_wallet_starting
+        attacker_wallet.wallet > 0
     ]
-    machine.pc = 0
-    possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
-    assert len(possible_ends) == 1
-    summary = summarise_possible_end(possible_ends[0])
-    assert summary['inputs'][0]['data']['func_info']['name'] == 'cfoWithdraw(address,uint256)'
-    assert summary['inputs'][0]['data']['args'][0]['val'] == cfo.hex()
-    assert summary['inputs'][0]['data']['args'][1]['val'] > 0
+
+    executor = SpeculativeUniverseExecutor(universe, max_invocations=1)
+    solutions = executor.get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
+
+    assert len(solutions) == 1
+
+    solution_input = solutions[0]['results']['inputs'][0]['solidity_abi_input']
+
+    assert solution_input['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    assert solution_input['args'][0]['val'] == cfo_wallet.address.hex()
+    assert solution_input['args'][1]['val'] > 0
+
+    # program = ready_hex(bankCFOVuln)
+    # machine = SpeculativeMachine(program=program, max_invocations=1, logging=False)
+
+    # cfo = pad_bytes_to_address(b'XCF0X')
+    # print("CFO:", cfo.hex())
+    # machine.execute_deterministic_function(func_sig('setCFO(address)'),
+    #                                        args=[cfo],
+    #                                        call_value=0,
+    #                                        sender=cfo)
+    # machine.execute_deterministic_function(func_sig('deposit()'),
+    #                                        args=[],
+    #                                        call_value=(eth_to_wei(5)),
+    #                                        sender=cfo)
+    # machine.execute_deterministic_function(func_sig('setCFO(address)'),
+    #                                        args=[machine.sender_address],
+    #                                        call_value=0,
+    #                                        sender=machine.sender_address)
+    # acceptance_criteria = [
+    #     machine.attacker_wallet > machine.attacker_wallet_starting
+    # ]
+    # machine.pc = 0
+    # possible_ends = SpeculativeMachineExecutor(machine).possible_ends(acceptance_criteria=acceptance_criteria)
+    # assert len(possible_ends) == 1
+    # summary = summarise_possible_end(possible_ends[0])
+    # assert summary['inputs'][0]['data']['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    # assert summary['inputs'][0]['data']['args'][0]['val'] == cfo.hex()
+    # assert summary['inputs'][0]['data']['args'][1]['val'] > 0
 
 def test_wallet_transfers_hard_mode():
+    binary = load_binary('./contracts/build/bankCFOVuln.bin')
+
+    universe = Universe()
+    contract = universe.deploy_contract(binary)
+    
+    attacker_wallet = universe.deploy_wallet(is_attacker=True)
+    cfo_wallet = universe.deploy_wallet(starting_wallet_amount=eth_to_wei(5))
+
+    contract.execute_function('setCFO(address)', args=[cfo_wallet.address],
+                              sender=cfo_wallet.address)
+
+    contract.execute_function('deposit()', args=[],
+                              call_value=int_to_bytes(eth_to_wei(5)), sender=cfo_wallet.address)
+
+    # contract.execute_function('setCFO(address)', args=[attacker_wallet.address],
+    #                           sender=attacker_wallet.address)
+
+    acceptance_criteria = [
+        attacker_wallet.wallet > 0
+    ]
+
+    executor = SpeculativeUniverseExecutor(universe, max_invocations=2)
+    solutions = executor.get_solutions([contract.address], acceptance_criteria=acceptance_criteria)
+
+    import pdb; pdb.set_trace()
+    assert len(solutions) == 1
+    # solution_input = solutions[0]['results']['inputs'][0]['solidity_abi_input']
+
+    # assert solution_input['func_info']['name'] == 'cfoWithdraw(address,uint256)'
+    # assert solution_input['args'][0]['val'] == cfo_wallet.address.hex()
+    # assert solution_input['args'][1]['val'] > 0
+
+
+
+
     program = ready_hex(bankCFOVuln)
     machine = SpeculativeMachine(program=program, max_invocations=2, logging=False)
 

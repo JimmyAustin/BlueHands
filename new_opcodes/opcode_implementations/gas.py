@@ -1,10 +1,7 @@
-from ..opcode import Opcode
+from utils import uint_to_bytes, value_is_constant
 
-
-class GasOpcode(Opcode):
-    def __init__(self, instruction):
-        super().__init__(instruction)
-
-    def execute(self, machine):
-        # TODO: Gas in general needs an overhaul and implementation
-        machine.stack.push(machine.invocation_symbols[-1]['current_gas'])
+def gas_op(execution_context, contract, universe):
+    if value_is_constant(execution_context.gas):
+        execution_context.stack.push(uint_to_bytes(execution_context.gas))
+    else:
+        execution_context.stack.push(execution_context.gas)

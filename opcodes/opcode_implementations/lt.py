@@ -10,7 +10,7 @@ class LtOpcode(Opcode):
     def execute(self, machine):
         val1 = machine.stack.pop()
         val2 = machine.stack.pop()
-        import pdb; pdb.set_trace()
+
         if value_is_constant(val1):
             val1 = bytes_to_uint(val1)
             if value_is_constant(val2):

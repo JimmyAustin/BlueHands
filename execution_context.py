@@ -10,7 +10,7 @@ from exceptions import ReturnException
 class ExecutionContext:
 
     def __init__(self, excId, contract, universe, call_method, execution_type, call_value=None,
-                 input_data=None):
+                 input_data=None, caller=None, timestamp=None):
 
         self.excId = excId
         self.contract = contract
@@ -19,9 +19,13 @@ class ExecutionContext:
         self.execution_type = execution_type
         self.stack = Stack()
         self.pc = 0
+        self.caller=caller
 
+        self.timestamp = timestamp
         self.input_data = input_data
         self.call_value = call_value
+
+        self.returned_data = bytes(0) # This is data returned from a HIGHER context.
 
         if self.execution_type == EXECUTION_TYPE_CONCRETE:
             self.__init_concrete_defaults()
@@ -31,16 +35,26 @@ class ExecutionContext:
     def __init_concrete_defaults(self):
         self.call_value = self.call_value or bytes(32)
         self.call_data_size = uint_to_bytes(len(self.input_data))
+        self.gas = 10000000000
         if self.execution_type == EXECUTION_TYPE_CONCRETE:
             if self.input_data is None:
                 raise ValueError('Must provide data (even bytes()) if execution type is concrete')
+        if self.timestamp is None:
+            self.timestamp = uint_to_bytes(100 + len(self.universe.execution_context_stacks))
 
     def __init_symbolic_defaults(self):
         self.call_value = BitVec(f"{self.excId}_CallValue", 256)
         self.timestamp = BitVec(f"{self.excId}_Timestamp", 256)
         self.call_data_size = BitVec(f"{self.excId}_CallDataSize", 256)
+        self.gas = BitVec(f"{self.excId}_Gas", 256)
         self.input_words = []
         self.input_words_by_index = {}
+        if self.caller is None:
+            import pdb; pdb.set_trace()
+            self.caller = BitVec(f"{self.excId}_Caller", 256)
+            self.specific_caller = None
+        if self.timestamp is None:
+            self.timestamp = BitVec(f"{self.excId}_Timestamp", 256)
 
     def execute(self):
         if self.execution_type == EXECUTION_TYPE_CONCRETE:
@@ -50,10 +64,16 @@ class ExecutionContext:
 
     def concrete_execute(self):
         while True:
-            instruction_func = get_instruction(self.get_next_program_bytes(1)[0])
+            instruction_byte = self.get_next_program_bytes(1)
+            instruction_func = get_instruction(instruction_byte[0])
             return_value = instruction_func(self, self.contract, self.universe)
-            if self.universe.logging:
-                self.universe.dump_state()
+            from pprint import pprint
+
+            # for item in self.stack.stack:
+            #     print(item.hex())
+
+            # if self.universe.logging:
+            #     self.universe.dump_state()
             if return_value is not None:
                 if return_value['type'] == 'return':
                     return return_value
@@ -65,7 +85,7 @@ class ExecutionContext:
         while True:
             instruction_func = get_instruction(self.get_next_program_bytes(1)[0])
             return_value = instruction_func(self, self.contract, self.universe)
-            self.universe.dump_state()
+
             if return_value is not None:
                 raise ReturnException(return_value.get('value'), return_value['func'])
                 # if return_value['type'] == 'return':
